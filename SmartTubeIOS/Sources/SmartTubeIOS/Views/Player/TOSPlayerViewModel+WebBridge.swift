@@ -4,6 +4,12 @@ import CoreFoundation
 import WebKit
 import os
 import SmartTubeIOSCore
+#if canImport(UIKit)
+import UIKit
+#endif
+#if canImport(AppKit) && !canImport(UIKit)
+import AppKit
+#endif
 
 private let tosLog = Logger(subsystem: "com.void.smarttube.app", category: "TOSPlayer")
 
@@ -355,7 +361,7 @@ extension TOSPlayerViewModel {
                 )
                 return
             }
-            guard let image = image, let data = image.pngData() else {
+            guard let image = image, let data = Self.pngData(from: image) else {
                 tosLog.error("[snapshot] no image/PNG data returned")
                 completion?(false)
                 CFNotificationCenterPostNotification(
@@ -380,5 +386,18 @@ extension TOSPlayerViewModel {
             )
         }
     }
+
+    #if canImport(UIKit)
+    private static func pngData(from image: UIImage) -> Data? {
+        image.pngData()
+    }
+    #else
+    private static func pngData(from image: NSImage) -> Data? {
+        guard let tiff = image.tiffRepresentation,
+            let rep = NSBitmapImageRep(data: tiff)
+        else { return nil }
+        return rep.representation(using: .png, properties: [:])
+    }
+    #endif
 }
 #endif  // !os(tvOS)

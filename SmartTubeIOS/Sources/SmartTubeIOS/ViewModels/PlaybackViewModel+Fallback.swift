@@ -45,6 +45,33 @@ struct HLSPlaybackPolicy: Equatable, Sendable {
                 requiresH264: false
             )
         }
+        // Authenticated TVHTML5 (TVAuth) HLS is signed for the Cobalt TV client.
+        // The previous default iOS YouTube-app UA caused AVPlayer 403s on Apple TV,
+        // which is how signed-in users fell through to muxed 360p.
+        if label.localizedCaseInsensitiveContains("tvauth") {
+            return Self(
+                userAgent: InnerTubeClients.TV.userAgent,
+                maximumHeight: nil,
+                filtersMasterManifest: false,
+                requiresH264: false
+            )
+        }
+        if label.contains("TVEmbedded") {
+            return Self(
+                userAgent: InnerTubeClients.Web.userAgent,
+                maximumHeight: nil,
+                filtersMasterManifest: false,
+                requiresH264: false
+            )
+        }
+        if label.contains("MWEB") {
+            return Self(
+                userAgent: InnerTubeClients.MWEB.userAgent,
+                maximumHeight: nil,
+                filtersMasterManifest: false,
+                requiresH264: false
+            )
+        }
         return Self(
             userAgent: "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X)",
             maximumHeight: nil,
@@ -97,6 +124,27 @@ extension PlaybackViewModel {
         }
         #if os(tvOS)
         // tvOS cannot use the WKWebView/BotGuard recovery available on iOS/macOS.
+        // Signed-in sessions: try authenticated TVHTML5 HLS first. Those manifests
+        // bypass rqh=1 and are not H.264/1080p-capped the way VisionOS is.
+        if TVOSPlaybackPolicy.prefersAuthenticatedTVClient(hasAuthToken: hasAuthToken) {
+            do {
+                let tvInfo = try await api.fetchPlayerInfoAuthenticated(videoId: video.id)
+                if tvInfo.hlsURL != nil,
+                    await tryAllStreams(
+                        video: video,
+                        info: tvInfo,
+                        label: "TVAuth",
+                        skipMuxed: true
+                    )
+                {
+                    playerLog.notice("[TVAuth] ✅ authenticated HLS — exhaustiveRetry done")
+                    return
+                }
+                playerLog.notice("[TVAuth] HLS/adaptive failed — trying VisionOS then legacy fallbacks")
+            } catch {
+                playerLog.notice("[TVAuth] player request failed: \(error) — trying VisionOS")
+            }
+        }
         // Current yt-dlp uses VISIONOS as its primary JS-less Apple client. After
         // seeding a normal YouTube webpage session it returns token-free HLS with
         // H.264 through 1080p, which AVPlayer handles natively on Apple TV.
@@ -116,7 +164,7 @@ extension PlaybackViewModel {
             playerLog.notice("[VisionOS] player request failed: \(error) — continuing legacy fallbacks")
         }
         #endif
-        #if canImport(WebKit)
+        #if canImport(WebKit) && !os(tvOS)
         // Phase -1a: Cached WKWebView HLS URL shortcut — skip 5–9 s extraction when the
         // master manifest URL for this video was stored by a prior session or neighbour
         // pre-extraction. Falls through to live WKWebView extraction if the URL has expired
@@ -267,9 +315,9 @@ extension PlaybackViewModel {
                 // video is already playing at the lower quality. Does not affect readyToPlay timing.
                 let vrMaxH = availableFormats.map(\.height).max() ?? 0
                 let preferredH =
-                    settings.preferredQuality == .auto
+                    effectiveQuality == .auto
                     ? Self.displayMaxVideoHeight()
-                    : (settings.preferredQuality.maxHeight ?? 1080)
+                    : (effectiveQuality.maxHeight ?? 1080)
                 if vrMaxH > 0 && vrMaxH < min(preferredH, 480) {
                     playerLog.notice(
                         "[AndroidVR] maxH=\(vrMaxH) < preferred \(min(preferredH, 480))p — scheduling background HLS quality upgrade"
@@ -1048,7 +1096,11 @@ extension PlaybackViewModel {
         let maxCurrentHeight = availableFormats.map(\.height).max() ?? 0
         let maxNewHeight = newFormats.map(\.height).max() ?? 0
         let isMuxedFallback = label.contains("/muxed")
-        if isMuxedFallback || newFormats.count > availableFormats.count || maxNewHeight > maxCurrentHeight
+        if isMuxedFallback {
+            // Keep a richer picker list so ⋯ → Quality stays usable after muxed play (#139).
+            availableFormats = TVOSPlaybackPolicy.formatsAfterMuxedFallback(
+                current: availableFormats, incoming: newFormats)
+        } else if newFormats.count > availableFormats.count || maxNewHeight > maxCurrentHeight
             || availableFormats.isEmpty
         {
             availableFormats = newFormats
@@ -1082,7 +1134,9 @@ extension PlaybackViewModel {
                 playerLog.notice("[\(label)] HLS: using cached manifest for \(videoId) variantCount=\(cached.count)")
                 allVariantURLs = cached
             } else {
-                let fetched = await fetchHLSVariantURLs(url: hlsURL)
+                let fetched = await qualityManager.fetchHLSVariantURLs(
+                    url: hlsURL, userAgent: hlsPolicy.userAgent
+                )
                 allVariantURLs = fetched
                 if !fetched.isEmpty {
                     PlaybackQualityManager.cacheHLSVariants(fetched, for: videoId)
@@ -1101,8 +1155,8 @@ extension PlaybackViewModel {
             }
             if !variantURLs.isEmpty {
                 hlsVariantURLs = variantURLs
-                let playableFormats = availableFormats.filter { variantURLs.keys.contains($0.height) }
-                availableFormats = playableFormats
+                availableFormats = TVOSPlaybackPolicy.mergedHLSPickerFormats(
+                    existing: availableFormats, variants: variantURLs)
                 // Use a variant playlist URL directly rather than the master manifest URL.
                 // The master manifest (hls_variant) stalls AVPlayer on manifest.googlevideo.com
                 // because it requires session-level auth that AVPlayer's isolated network stack
@@ -2080,7 +2134,7 @@ extension PlaybackViewModel {
     /// that restriction and are well-supported by AVFoundation.
     private func qualityCapVideoURL(from formats: [VideoFormat]) -> URL? {
         let maxH: Int
-        if settings.preferredQuality != .auto, let h = settings.preferredQuality.maxHeight {
+        if effectiveQuality != .auto, let h = effectiveQuality.maxHeight {
             maxH = h
         } else {
             // Auto: cap at the display's native resolution — no benefit loading higher

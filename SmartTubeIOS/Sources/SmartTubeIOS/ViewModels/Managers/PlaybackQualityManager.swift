@@ -200,23 +200,27 @@ final class PlaybackQualityManager {
         let savedTime = delegate.currentTime
         qualityTask = Task { [weak self] in
             guard let self else { return }
-            #if canImport(WebKit)
-            // Guard: if current playback is a muxed fallback, all stored HLS variant URLs
-            // are from an expired/failed session. Reusing them would immediately 403.
-            // Trigger 403 recovery to run a fresh exhaustiveRetry → fresh WKWebView extraction.
+            // Guard: if current playback is a muxed fallback, stored HLS variant URLs
+            // (if any) are from an expired/failed session. Reusing them would 403.
+            // Trigger recovery so exhaustiveRetry can fetch a fresh adaptive/HLS path.
+            // On tvOS this is the ⋯ → Quality path (#139) — WebKit extraction is skipped
+            // and TVAuth/VisionOS HLS is preferred instead.
             if isMuxedFallback {
+                #if canImport(WebKit)
                 wkHLSMasterURL = nil
-                hlsVariantURLs = [:]
                 webHLSProxyLoader = nil
+                #endif
+                hlsVariantURLs = [:]
                 isMuxedFallback = false
                 playerLog.notice(
-                    "[quality] muxed fallback — clearing stale wkHLS URLs, triggering recovery for fresh extraction")
+                    "[quality] muxed fallback — triggering recovery for fresh extraction")
                 let err = NSError(
                     domain: NSURLErrorDomain, code: -1102,
                     userInfo: [NSLocalizedDescriptionKey: "Quality switch: current stream is muxed fallback"])
                 await delegate.qualityItemDidFail(error: err, quality: quality, hasAppliedH264Cap: hasAppliedH264Cap)
                 return
             }
+            #if canImport(WebKit)
             if self.wkHLSMasterURL != nil {
                 await self.reloadWKHLSItem(seekTo: savedTime, height: format?.height)
                 return

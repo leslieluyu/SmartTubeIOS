@@ -414,7 +414,7 @@ extension PlaybackViewModel {
                 group.cancelAll()
             }
         }
-        #if canImport(WebKit)
+        #if canImport(WebKit) && !os(tvOS)
         // Fire-and-forget: start WKWebView BotGuard pipeline in the background.
         // Takes 3–8 s; by the time the primary attempt fails and exhaustiveRetry runs,
         // it may be ready to provide a full getMinter-minted token (CDN-accepted for rqh=1).
@@ -599,6 +599,49 @@ extension PlaybackViewModel {
             self.cacheStatusSummary =
                 "pi:\(cached.playerInfo != nil ? "HIT" : "MISS") wkHLS:\(wkHLSCacheHit ? "HIT" : "MISS")"
 
+            // tvOS + signed-in: try authenticated TVHTML5 HLS before the unauthenticated
+            // iOS client. The iOS client frequently returns no HLS or rqh=1 streams that
+            // fail on Apple TV, which used to dump every cold start into exhaustiveRetry
+            // ("Trying alternative sources…") and then muxed 360p.
+            #if os(tvOS)
+            if TVOSPlaybackPolicy.prefersAuthenticatedTVClient(hasAuthToken: hasAuthToken) {
+                do {
+                    let tvInfo = try await api.fetchPlayerInfoAuthenticated(videoId: video.id)
+                    guard currentVideo?.id == video.id else {
+                        playerLog.notice("[loadAsync] superseded: discarding TVAuth playerInfo for \(video.id)")
+                        return
+                    }
+                    if tvInfo.hlsURL != nil {
+                        playerInfo = tvInfo
+                        availableFormats = Self.deduplicatedVideoFormats(tvInfo.formats)
+                        availableCaptions = tvInfo.captionTracks
+                        autoApplyCaptionPreference(tracks: tvInfo.captionTracks)
+                        selectedFormat = nil
+                        await VideoPreloadCache.shared.store(playerInfo: tvInfo, for: video.id)
+                        let savedState = await VideoStateStore.shared.state(for: video.id)
+                        if let pos = savedState?.position, pos > 5 {
+                            savedPositionToRestore = pos
+                        }
+                        playerLog.notice(
+                            "[tvOS] cold start: authenticated TV HLS formats=\(tvInfo.formats.count) maxH=\(availableFormats.map(\.height).max() ?? 0)"
+                        )
+                        if await tryAllStreams(
+                            video: video, info: tvInfo, label: "TVAuth", skipMuxed: true)
+                        {
+                            playerLog.notice("[tvOS] cold start TVAuth HLS playing — loadAsync done")
+                            return
+                        }
+                        playerLog.notice(
+                            "[tvOS] TVAuth HLS failed — continuing with iOS client / exhaustiveRetry")
+                    } else {
+                        playerLog.notice("[tvOS] TVAuth returned no HLS — continuing with iOS client")
+                    }
+                } catch {
+                    playerLog.notice("[tvOS] TVAuth cold-start request failed: \(error)")
+                }
+            }
+            #endif
+
             // Apply cached DeArrow overrides (community title / thumbnail timestamp).
             // Done immediately after consume() so VideoCardView can show the override
             // as soon as the player screen appears, before Phase 2 completes.
@@ -772,7 +815,8 @@ extension PlaybackViewModel {
                     guard let self, !Task.isCancelled, !variantURLs.isEmpty else { return }
                     self.hlsVariantURLs = variantURLs
                     let beforeCount = self.availableFormats.count
-                    self.availableFormats = self.availableFormats.filter { variantURLs.keys.contains($0.height) }
+                    self.availableFormats = TVOSPlaybackPolicy.mergedHLSPickerFormats(
+                        existing: self.availableFormats, variants: variantURLs)
                     playerLog.notice(
                         "HLS variants (bg): \(variantURLs.keys.sorted().reversed()) — filtered quality picker \(beforeCount) → \(self.availableFormats.count) options"
                     )
@@ -816,11 +860,11 @@ extension PlaybackViewModel {
             // Quality is steered via AVPlayerItem hints (preferredMaximumResolution /
             // preferredPeakBitRate) which AVPlayer honours during ABR adaptation.
             let initialStreamURL = masterStreamURL
-            // Compute effective quality cap: explicit setting only.
+            // Compute effective quality cap: per-video pick, else persisted preferredQuality.
             // Auto quality leaves hints unconstrained (zero) so AVPlayer's ABR can freely
             // select the highest variant the network supports.
             let initialMaxH: Int
-            if settings.preferredQuality != .auto, let h = settings.preferredQuality.maxHeight {
+            if effectiveQuality != .auto, let h = effectiveQuality.maxHeight {
                 initialMaxH = h
                 let matchingFormat = availableFormats.first { $0.height <= h }
                 selectedFormat = matchingFormat
@@ -862,14 +906,28 @@ extension PlaybackViewModel {
             // Apply ABR hints so AVPlayer selects the right variant immediately.
             // Consistent with the quality-switch path in PlaybackQualityManager.
             if info.hlsURL != nil {
-                // Fast-start: cap initial ABR at 360p so AVPlayer picks a low-bitrate
-                // variant for the first segment → first frame on screen as quickly as
-                // possible. After .readyToPlay the hint is upgraded to the user's
-                // preferred quality (see itemObserverTask ramp below).
-                item.preferredMaximumResolution = CGSize(width: 640, height: 360)
-                item.preferredPeakBitRate = peakBitRate(for: 360)
-                let target = initialMaxH > 0 ? "\(initialMaxH)p" : "Auto"
-                playerLog.notice("[fast-start] initial ABR hint → 360p (preferred target: \(target))")
+                #if os(tvOS)
+                let skipFastStartCap = true
+                #else
+                let skipFastStartCap = false
+                #endif
+                // iOS: cap initial ABR at 360p so the first frame appears quickly, then
+                // ramp to preferredQuality after readyToPlay. tvOS: apply effectiveQuality
+                // immediately — 360p on a living-room display is the poor-quality report.
+                let startH = TVOSPlaybackPolicy.initialABRHeight(
+                    effectiveQuality: effectiveQuality, skipFastStartCap: skipFastStartCap)
+                if let h = startH {
+                    item.preferredMaximumResolution = CGSize(width: CGFloat(h) * 4, height: CGFloat(h))
+                    item.preferredPeakBitRate = peakBitRate(for: h)
+                    let target = initialMaxH > 0 ? "\(initialMaxH)p" : "Auto"
+                    playerLog.notice(
+                        "[fast-start] initial ABR hint → \(h)p (preferred target: \(target) skipFastStart=\(skipFastStartCap))"
+                    )
+                } else {
+                    item.preferredMaximumResolution = .zero
+                    item.preferredPeakBitRate = 0
+                    playerLog.notice("[fast-start] initial ABR hint → Auto (unconstrained)")
+                }
             }
             // Observe item status using async/await (withCheckedContinuation is not needed
             // here since we only need to react to status changes, not await them).
@@ -951,9 +1009,11 @@ extension PlaybackViewModel {
                         // to a higher-quality variant during continued playback. This is
                         // a hint update only — no item replacement, no stutter.
                         if info.hlsURL != nil {
-                            let targetMaxH = self.settings.preferredQuality.maxHeight
+                            let targetMaxH = self.effectiveQuality.maxHeight
                             Task { [weak self, weak item] in
+                                #if !os(tvOS)
                                 try? await Task.sleep(for: .milliseconds(800))
+                                #endif
                                 guard let self, !Task.isCancelled else { return }
                                 self.timeToHighQualityMs = Int(Date().timeIntervalSince(self.videoLoadStartedAt) * 1000)
                                 // Reset to system default so scrubbing has a comfortable
