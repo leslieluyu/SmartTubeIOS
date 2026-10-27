@@ -39,6 +39,13 @@ build:
 build-tvos:
     xcodebuild build -workspace {{workspace}} -scheme "Smart Tube" -destination "platform=tvOS Simulator,name={{tv_sim}}" -derivedDataPath {{derived}} CODE_SIGNING_ALLOWED=NO -quiet
 
+# Cloud CI: generic destinations (no named simulator) and no -quiet so failures are visible.
+build-ios-ci:
+    xcodebuild build -workspace {{workspace}} -scheme SmartTube -destination "generic/platform=iOS Simulator" -derivedDataPath {{derived}} CODE_SIGNING_ALLOWED=NO
+
+build-tvos-ci:
+    xcodebuild build -workspace {{workspace}} -scheme "Smart Tube" -destination "generic/platform=tvOS Simulator" -derivedDataPath {{derived}} CODE_SIGNING_ALLOWED=NO
+
 test-unit:
     cd {{package}} && swift test --parallel 2>&1 | tail -30
 
