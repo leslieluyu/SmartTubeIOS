@@ -28,7 +28,10 @@ jobs:
       - name: Install tools
         run: brew install just
       - name: Placeholder secrets (fork-safe)
-        run: cp SmartTubeApp/Config/Secrets.xcconfig.example SmartTubeApp/Config/Secrets.xcconfig
+        run: |
+          cp SmartTubeApp/Config/Secrets.xcconfig.example SmartTubeApp/Config/Secrets.xcconfig
+          cp SmartTubeApp/SmartTubeApp/GoogleService-Info.plist.example \
+            SmartTubeApp/SmartTubeApp/GoogleService-Info.plist
       - name: Docs sanity
         run: |
           test $(wc -l < AGENTS.md) -le 200
@@ -70,7 +73,15 @@ jobs:
       - name: Install tools
         run: brew install just
       - name: Placeholder secrets (fork-safe)
-        run: cp SmartTubeApp/Config/Secrets.xcconfig.example SmartTubeApp/Config/Secrets.xcconfig
+        run: |
+          cp SmartTubeApp/Config/Secrets.xcconfig.example SmartTubeApp/Config/Secrets.xcconfig
+          # Firebase Crashlytics + CopyPlistFile require this path. The example
+          # is placeholder-only (YOUR_FIREBASE_*) and is gitignored once copied.
+          cp SmartTubeApp/SmartTubeApp/GoogleService-Info.plist.example \
+            SmartTubeApp/SmartTubeApp/GoogleService-Info.plist
+          mkdir -p "SmartTubeApp/Smart Tube"
+          cp SmartTubeApp/SmartTubeApp/GoogleService-Info.plist.example \
+            "SmartTubeApp/Smart Tube/GoogleService-Info.plist"
       - name: Cache SPM
         uses: actions/cache@v4
         with:
@@ -79,7 +90,6 @@ jobs:
             ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
           key: spm-compile-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
       - name: Build iOS Simulator
-        continue-on-error: true
         run: just build-ios-ci
       - name: Build tvOS Simulator
         run: just build-tvos-ci
