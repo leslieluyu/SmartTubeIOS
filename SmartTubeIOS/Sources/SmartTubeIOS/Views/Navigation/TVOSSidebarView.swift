@@ -8,8 +8,9 @@ import SwiftUI
 /// destinations. Left from home content focuses the rail; Right returns focus
 /// to the page. Existing 4K player focus is unaffected — this is browse chrome.
 ///
-/// Sized via `TVOSSidebarMetrics` so 12 destinations fit 1920×1080 without
-/// overlapping; extra height becomes spacing between rows.
+/// Sized via `TVOSSidebarMetrics` for a medium 1080p rhythm: 30pt icons, 26pt
+/// labels, fixed row spacing. Settings stays at the bottom; extra height is
+/// not stretched between every row.
 struct TVOSSidebarView: View {
     @Binding var selection: TVOSSidebarDestination
     @FocusState private var focusedItem: TVOSSidebarDestination?
@@ -19,11 +20,11 @@ struct TVOSSidebarView: View {
     private var isExpanded: Bool { focusedItem != nil }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: TVOSSidebarMetrics.rowSpacing) {
             ForEach(TVOSSidebarDestination.primaryItems) { item in
                 railButton(item)
-                Spacer(minLength: TVOSSidebarMetrics.minRowSpacing)
             }
+            Spacer(minLength: TVOSSidebarMetrics.rowSpacing)
             railButton(.settings)
         }
         .padding(.vertical, TVOSSidebarMetrics.railVerticalPadding)
@@ -47,8 +48,10 @@ struct TVOSSidebarView: View {
     }
 
     private func railButton(_ item: TVOSSidebarDestination) -> some View {
-        let isSelected = selection == item
-        let isFocused = focusedItem == item
+        let chrome = TVOSSidebarHighlightPolicy.chrome(
+            isSelected: selection == item,
+            isFocused: focusedItem == item
+        )
         return Button {
             selection = item
         } label: {
@@ -70,15 +73,11 @@ struct TVOSSidebarView: View {
             }
             .frame(height: TVOSSidebarMetrics.rowContentHeight, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .foregroundStyle(
-                (isSelected || isFocused)
-                    ? Color(white: colorScheme == .dark ? 0 : 1)
-                    : Color.primary
-            )
+            .foregroundStyle(foreground(for: chrome))
             .padding(.horizontal, TVOSSidebarMetrics.rowHorizontalPadding)
             .padding(.vertical, TVOSSidebarMetrics.rowVerticalPadding)
             .background(
-                (isSelected || isFocused) ? Color.primary : Color.clear,
+                background(for: chrome),
                 in: RoundedRectangle(cornerRadius: TVOSSidebarMetrics.cornerRadius)
             )
         }
@@ -86,8 +85,28 @@ struct TVOSSidebarView: View {
         .focusEffectDisabled()
         .focused($focusedItem, equals: item)
         .accessibilityLabel(item.title)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityAddTraits(selection == item ? [.isSelected] : [])
         .accessibilityIdentifier(item.accessibilityIdentifier)
+    }
+
+    private func foreground(for chrome: TVOSSidebarRowChrome) -> Color {
+        switch chrome {
+        case .focused:
+            Color(white: colorScheme == .dark ? 0 : 1)
+        case .selected, .idle:
+            Color.primary
+        }
+    }
+
+    private func background(for chrome: TVOSSidebarRowChrome) -> Color {
+        switch chrome {
+        case .focused:
+            Color.primary
+        case .selected:
+            Color.primary.opacity(TVOSSidebarMetrics.selectedPillOpacity)
+        case .idle:
+            Color.clear
+        }
     }
 }
 

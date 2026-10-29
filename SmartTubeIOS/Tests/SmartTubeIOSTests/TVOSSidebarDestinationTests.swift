@@ -53,16 +53,25 @@ struct TVOSSidebarDestinationTests {
         #expect(TVOSSidebarDestination.primaryItems.last == .movies)
     }
 
-    @Test("packed rail fits Apple TV 1080p without overlapping rows")
+    @Test("medium rail metrics fit Apple TV 1080p without overlapping or looking sparse")
     func packedHeightFits1080p() {
-        #expect(TVOSSidebarMetrics.rowHeight < 40)
+        #expect(TVOSSidebarMetrics.iconSize >= 28 && TVOSSidebarMetrics.iconSize <= 32)
+        #expect(TVOSSidebarMetrics.labelFontSize >= 24 && TVOSSidebarMetrics.labelFontSize <= 28)
         #expect(TVOSSidebarMetrics.iconSize <= TVOSSidebarMetrics.rowContentHeight)
-        #expect(TVOSSidebarMetrics.labelFontSize <= 22)
-        #expect(TVOSSidebarMetrics.minRowSpacing >= 6)
+        #expect(TVOSSidebarMetrics.rowHeight >= 44 && TVOSSidebarMetrics.rowHeight <= 70)
+        #expect(TVOSSidebarMetrics.rowSpacing >= 6 && TVOSSidebarMetrics.rowSpacing <= 12)
         #expect(TVOSSidebarMetrics.fitsAppleTV1080)
         #expect(
             TVOSSidebarMetrics.packedHeight
                 <= TVOSSidebarMetrics.appleTV1080Height
                 - TVOSSidebarMetrics.appleTV1080VerticalSafeBudget)
+    }
+
+    @Test("focused row wins over selected so two white pills cannot appear")
+    func focusedHighlightWinsOverSelected() {
+        #expect(TVOSSidebarHighlightPolicy.chrome(isSelected: true, isFocused: true) == .focused)
+        #expect(TVOSSidebarHighlightPolicy.chrome(isSelected: true, isFocused: false) == .selected)
+        #expect(TVOSSidebarHighlightPolicy.chrome(isSelected: false, isFocused: true) == .focused)
+        #expect(TVOSSidebarHighlightPolicy.chrome(isSelected: false, isFocused: false) == .idle)
     }
 }

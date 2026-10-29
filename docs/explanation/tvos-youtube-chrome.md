@@ -14,7 +14,7 @@ the user’s requested chrome plus in-repo player/home building blocks.
 |---|---|
 | **Player bar** | Bottom of the video (not floating centre chrome). Title + description + Subscribe. Left/Right seek while Play/Pause is the centre action. Like, Dislike, Comments, Save (Watch Later), Options (⋯). |
 | **Home** | Large Recommended hero at the top, then Recommended / Shorts / Subscriptions shelves. |
-| **Left rail** | Collapsed icon stack; expands with labels when focused. Search, Home, Subscriptions, Library, News, Gaming, Live, Music, Sports, Settings. Compact metrics (`TVOSSidebarMetrics`) keep 12 destinations readable without overlap on Apple TV 1080p. |
+| **Left rail** | Collapsed icon stack; expands with labels when focused. Search, Home, Subscriptions, Library, News, Gaming, Live, Music, Sports, Settings. Medium 1080p metrics (`TVOSSidebarMetrics`: ~30pt icons, ~26pt labels, fixed row spacing). Focused row owns the white pill; the current page uses a dimmer selected state. |
 
 ## Missing / stubbed
 
