@@ -178,6 +178,9 @@ extension PlaybackViewModel {
         tvEmbeddedEarlyTask = nil
         #endif
         qualityManager.reset()
+        tvosHighResOverlayTask?.cancel()
+        tvosHighResOverlayTask = nil
+        tvosHighResOverlayVideoId = nil
         phase2Task?.cancel()
         phase2Task = nil
         prefetchTask?.cancel()
@@ -598,6 +601,10 @@ extension PlaybackViewModel {
             let wkHLSCacheHit = await VideoPreloadCache.shared.cachedWKHLSURL(for: video.id) != nil
             self.cacheStatusSummary =
                 "pi:\(cached.playerInfo != nil ? "HIT" : "MISS") wkHLS:\(wkHLSCacheHit ? "HIT" : "MISS")"
+
+            // tvOS: fetch Android/WebCreator 1440p/2160p in parallel with TVAuth HLS.
+            // Overlay failure is ignored — signed-in HLS cold start is unchanged.
+            scheduleTVOSHighResOverlay(for: video)
 
             // tvOS + signed-in: try authenticated TVHTML5 HLS before the unauthenticated
             // iOS client. The iOS client frequently returns no HLS or rqh=1 streams that
@@ -1148,6 +1155,9 @@ extension PlaybackViewModel {
             )
             player.rate = Float(settings.playbackSpeed)
             isPlaying = true
+            #if os(tvOS)
+            autoSelectHighResOverlayIfPreferred()
+            #endif
             playerLog.notice(
                 "[loadAsync] rate set — player.rate=\(self.player.rate) timeControlStatus=\(self.player.timeControlStatus.rawValue)"
             )

@@ -82,7 +82,11 @@ public final class PlaybackViewModel {
     // MARK: - Forwarding computed properties (views unchanged)
 
     public internal(set) var availableFormats: [VideoFormat] {
-        get { qualityManager.availableFormats }
+        get {
+            TVOSPlaybackPolicy.mergeHighResOverlay(
+                hlsPicker: qualityManager.availableFormats,
+                overlayFormats: qualityManager.playableOverlayFormats)
+        }
         set { qualityManager.availableFormats = newValue }
     }
     public internal(set) var selectedFormat: VideoFormat? {
@@ -382,6 +386,10 @@ public final class PlaybackViewModel {
     /// or pre-warms AVAssetTrack arrays for the user's preferred quality tier.
     /// Cancelled on every new video load.
     var prefetchTask: Task<Void, Never>?
+    /// tvOS 1440p/2160p overlay fetch (Android, then WebCreator). Cancelled on load().
+    var tvosHighResOverlayTask: Task<Void, Never>?
+    /// Video id the overlay task was started for — skips duplicate fetches.
+    var tvosHighResOverlayVideoId: String?
     /// Early WKWebView HLS extraction task, started concurrently with the primary iOS
     /// path in loadAsync() so the result is ready (or close to ready) by the time
     /// exhaustiveRetry reaches Phase -2. Cancelled by load() only when a different
@@ -557,6 +565,10 @@ extension PlaybackViewModel: QualityEventHandler {
     }
 
     func qualityItemDidFail(error: Error?, quality: AppSettings.VideoQuality, hasAppliedH264Cap: Bool) async {
+        if qualityManager.shouldFallbackHighResOverlayToHLS {
+            await revertHighResOverlayToHLS(seekTo: currentTime)
+            return
+        }
         let nsErr = (error as? NSError) ?? NSError(domain: "", code: 0)
         let action = qualityRecoveryAction(
             for: nsErr,

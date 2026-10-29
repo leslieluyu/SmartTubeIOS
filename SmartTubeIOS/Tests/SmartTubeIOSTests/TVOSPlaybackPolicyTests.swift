@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Testing
 
@@ -7,16 +8,22 @@ import Testing
 @Suite("tvOS playback quality policy")
 struct TVOSPlaybackPolicyTests {
 
-    private func makeFormat(height: Int, muxed: Bool = false) -> VideoFormat {
+    private func makeFormat(
+        height: Int,
+        muxed: Bool = false,
+        mimeType: String? = nil,
+        url: String? = nil
+    ) -> VideoFormat {
         VideoFormat(
             label: "\(height)p",
             width: height * 16 / 9,
             height: height,
             fps: 30,
-            mimeType: muxed
-                ? "video/mp4; codecs=\"avc1.42001E, mp4a.40.2\""
-                : "video/mp4; codecs=\"avc1.640028\"",
-            url: URL(string: "https://example.com/\(height).mp4"),
+            mimeType: mimeType
+                ?? (muxed
+                    ? "video/mp4; codecs=\"avc1.42001E, mp4a.40.2\""
+                    : "video/mp4; codecs=\"avc1.640028\""),
+            url: URL(string: url ?? "https://example.com/\(height).mp4"),
             bitrate: height * 1_000
         )
     }
@@ -108,12 +115,28 @@ struct TVOSPlaybackPolicyTests {
             existing: existing, variants: variants)
         #expect(matched.map(\.height) == [1080], "only heights present in the manifest are kept")
 
-        let sabrOnly = [makeFormat(height: 2160)]
+        let sabrOnly = [
+            makeFormat(
+                height: 2160,
+                url: "https://rr1.googlevideo.com/videoplayback?itag=313&c=TVHTML5")
+        ]
         let synthesized = TVOSPlaybackPolicy.mergedHLSPickerFormats(
             existing: sabrOnly, variants: variants)
         #expect(
             synthesized.map(\.height) == [1080, 720],
-            "when no format height matches the manifest, synthesize from variants")
+            "SABR 2160p is not kept; synthesize HLS rows from variants")
+
+        let playable4K = [
+            makeFormat(
+                height: 2160,
+                mimeType: "video/mp4; codecs=\"av01.0.12M.08\"",
+                url: "https://rr1.googlevideo.com/videoplayback?itag=401&c=ANDROID")
+        ]
+        let withOverlay = TVOSPlaybackPolicy.mergedHLSPickerFormats(
+            existing: playable4K, variants: variants)
+        #expect(
+            withOverlay.map(\.height) == [2160, 1080, 720],
+            "playable progressive 2160p is kept beside the HLS ladder")
     }
 
     // MARK: - HLSPlaybackPolicy client UA (#139 / TVAuth)
@@ -164,4 +187,155 @@ struct TVOSPlaybackPolicyTests {
         #expect(safari.userAgent == InnerTubeClients.WebSafari.userAgent)
         #expect(safari.maximumHeight == nil)
     }
+
+    // MARK: - H5 tvOS 1440p/2160p overlay
+
+    @Test("AV1/HEVC/H.264 progressive 4K is playable; VP9, SABR, and rqh=1 are not")
+    func playableHighResFilter() {
+        let av1 = makeFormat(
+            height: 2160, mimeType: "video/mp4; codecs=\"av01.0.12M.08\"",
+            url: "https://rr1.googlevideo.com/videoplayback?itag=401&c=ANDROID")
+        let hevc = makeFormat(
+            height: 1440, mimeType: "video/mp4; codecs=\"hvc1.1.6.L150.B0\"",
+            url: "https://rr1.googlevideo.com/videoplayback?itag=266&c=ANDROID")
+        let vp9 = makeFormat(
+            height: 2160, mimeType: "video/webm; codecs=\"vp09.00.51.08\"",
+            url: "https://rr1.googlevideo.com/videoplayback?itag=313&c=ANDROID")
+        let vp9InMp4 = makeFormat(
+            height: 2160, mimeType: "video/mp4; codecs=\"vp09.00.51.08\"",
+            url: "https://rr1.googlevideo.com/videoplayback?itag=313&c=ANDROID")
+        let sabr = makeFormat(
+            height: 2160, mimeType: "video/mp4; codecs=\"av01.0.12M.08\"",
+            url: "https://rr1.googlevideo.com/videoplayback?itag=401&c=TVHTML5")
+        let rqh = makeFormat(
+            height: 2160, mimeType: "video/mp4; codecs=\"av01.0.12M.08\"",
+            url: "https://rr1.googlevideo.com/videoplayback/rqh/1/video.mp4?itag=401&c=ANDROID")
+        let h2641080 = makeFormat(height: 1080)
+
+        #expect(TVOSPlaybackPolicy.isAVPlayerDecodableProgressive(av1))
+        #expect(TVOSPlaybackPolicy.isAVPlayerDecodableProgressive(hevc))
+        #expect(!TVOSPlaybackPolicy.isAVPlayerDecodableProgressive(vp9))
+        #expect(!TVOSPlaybackPolicy.isAVPlayerDecodableProgressive(vp9InMp4))
+        #expect(!TVOSPlaybackPolicy.isAVPlayerDecodableProgressive(sabr))
+        #expect(!TVOSPlaybackPolicy.isAVPlayerDecodableProgressive(rqh))
+        #expect(TVOSPlaybackPolicy.isAVPlayerDecodableProgressive(h2641080))
+
+        let high = TVOSPlaybackPolicy.playableHighResFormats(from: [
+            av1, hevc, vp9, sabr, rqh, h2641080,
+        ])
+        #expect(high.map(\.height) == [2160, 1440])
+        #expect(high[0].codecShortLabel == "AV1")
+        #expect(high[1].codecShortLabel == "HEVC")
+    }
+
+    @Test("overlay merge puts 2160p/1440p above the HLS 1080p ladder")
+    func mergeHighResOverlayOntoHLSPicker() {
+        let hls = [
+            makeFormat(height: 1080),
+            makeFormat(height: 720),
+            makeFormat(height: 360),
+        ]
+        let overlay = [
+            makeFormat(
+                height: 2160, mimeType: "video/mp4; codecs=\"av01.0.12M.08\"",
+                url: "https://rr1.googlevideo.com/videoplayback?itag=401&c=ANDROID"),
+            makeFormat(
+                height: 1440, mimeType: "video/mp4; codecs=\"av01.0.12M.08\"",
+                url: "https://rr1.googlevideo.com/videoplayback?itag=400&c=ANDROID"),
+            makeFormat(height: 1080),
+        ]
+        let merged = TVOSPlaybackPolicy.mergeHighResOverlay(hlsPicker: hls, overlayFormats: overlay)
+        #expect(merged.map(\.height) == [2160, 1440, 1080, 720, 360])
+        #expect(merged[0].codecShortLabel == "AV1")
+        #expect(merged[2].url?.absoluteString.contains("example.com") == true)
+    }
+
+    @Test("4K selection uses progressive composition, not HLS ABR, when HLS has no 2160p")
+    func usesProgressivePathWhenHLSLacks4K() {
+        #expect(
+            TVOSPlaybackPolicy.usesProgressiveHighResPath(
+                height: 2160, hlsVariantHeights: [1080, 720, 360], overlayHeights: [2160, 1440]))
+        #expect(
+            TVOSPlaybackPolicy.usesProgressiveHighResPath(
+                height: 1440, hlsVariantHeights: [1080, 720], overlayHeights: [2160, 1440]))
+        #expect(
+            !TVOSPlaybackPolicy.usesProgressiveHighResPath(
+                height: 1080, hlsVariantHeights: [1080, 720], overlayHeights: [2160, 1440]))
+        #expect(
+            !TVOSPlaybackPolicy.usesProgressiveHighResPath(
+                height: 2160, hlsVariantHeights: [2160, 1080], overlayHeights: [2160]))
+        #expect(
+            !TVOSPlaybackPolicy.usesProgressiveHighResPath(
+                height: 2160, hlsVariantHeights: [1080], overlayHeights: []))
+        #expect(
+            !TVOSPlaybackPolicy.usesProgressiveHighResPath(
+                height: nil, hlsVariantHeights: [1080], overlayHeights: [2160]))
+    }
+
+    @Test("H.264 ranks ahead of AV1 at the same 4K height")
+    func highResPrefersH264ThenHEVCThenAV1() {
+        let av1 = makeFormat(
+            height: 2160, mimeType: "video/mp4; codecs=\"av01.0.12M.08\"",
+            url: "https://rr1.googlevideo.com/videoplayback?itag=401&c=ANDROID")
+        let h264 = makeFormat(
+            height: 2160, mimeType: "video/mp4; codecs=\"avc1.640033\"",
+            url: "https://rr1.googlevideo.com/videoplayback?itag=266&c=ANDROID")
+        let ranked = TVOSPlaybackPolicy.playableHighResFormats(from: [av1, h264])
+        #expect(ranked.map(\.codecShortLabel) == ["H.264", "AV1"])
+    }
+
+    @Test("4K overlay DASH failure falls back to HLS instead of 403 recovery")
+    @MainActor
+    func overlayDASHFailureFallsBackToHLS() {
+        let player = OverlayMockPlayer()
+        let mgr = PlaybackQualityManager(player: player)
+        let delegate = OverlayMockDelegate()
+        delegate.playerInfo = PlayerInfo(
+            video: Video(id: "vid", title: "T", channelTitle: "C"),
+            formats: [makeFormat(height: 1080)],
+            hlsURL: URL(string: "https://example.com/master.m3u8"),
+            dashURL: nil,
+            captionTracks: [],
+            trackingURLs: nil,
+            endCards: []
+        )
+        mgr.delegate = delegate
+        mgr.hlsVariantURLs = [1080: URL(string: "https://example.com/1080.m3u8")!]
+        let av1 = makeFormat(
+            height: 2160, mimeType: "video/mp4; codecs=\"av01.0.12M.08\"",
+            url: "https://rr1.googlevideo.com/videoplayback?itag=401&c=ANDROID")
+        mgr.highResOverlayInfo = PlayerInfo(
+            video: Video(id: "vid", title: "T", channelTitle: "C"),
+            formats: [av1],
+            hlsURL: nil,
+            dashURL: nil,
+            captionTracks: [],
+            trackingURLs: nil,
+            endCards: []
+        )
+        mgr.selectedFormat = av1
+        #expect(mgr.shouldFallbackHighResOverlayToHLS)
+
+        mgr.selectedFormat = makeFormat(height: 1080)
+        #expect(!mgr.shouldFallbackHighResOverlayToHLS)
+    }
+}
+
+private final class OverlayMockPlayer: PlayerItemSwappable {
+    var rate: Float = 0
+    func replaceCurrentItem(with item: AVPlayerItem?) {}
+}
+
+@MainActor
+private final class OverlayMockDelegate: QualityContext, QualityEventHandler {
+    var playerInfo: PlayerInfo?
+    var settings = AppSettings()
+    var currentVideo: Video?
+    var currentTime: TimeInterval = 0
+    var toastMessage: String?
+    var isSwappingItem = false
+    var isQualityChangePending = false
+    func qualityItemDidBecomeReady(_ item: AVPlayerItem, seekTo: TimeInterval) {}
+    func qualityItemDidFail(error: Error?, quality: AppSettings.VideoQuality, hasAppliedH264Cap: Bool) async {}
+    func qualitySelectDASHFormat(videoURL: URL, audioURL: URL, seekTo: TimeInterval) async {}
 }

@@ -87,6 +87,10 @@ final class PlaybackQualityManager {
     /// survives CDN-failure reverts; cleared only by `reset()` on a new video.
     var perVideoQuality: AppSettings.VideoQuality? = nil
     var availableFormats: [VideoFormat] = []
+    /// Progressive 1440p/2160p `PlayerInfo` from Android / WebCreator, used on tvOS
+    /// when TVAuth HLS tops out at 1080p. `nil` until the overlay fetch lands.
+    /// Does not replace `delegate.playerInfo` — HLS cold-start stays on TVAuth.
+    var highResOverlayInfo: PlayerInfo? = nil
     var hlsVariantURLs: [Int: URL] = [:]
     private var hlsPlaybackUserAgent = InnerTubeClients.Web.userAgent
     private var hlsPlaybackMaximumHeight: Int? = nil
@@ -141,6 +145,7 @@ final class PlaybackQualityManager {
         pendingQualityLabel = ""
         perVideoQuality = nil
         availableFormats = []
+        highResOverlayInfo = nil
         hlsVariantURLs = [:]
         hlsPlaybackUserAgent = InnerTubeClients.Web.userAgent
         hlsPlaybackMaximumHeight = nil
@@ -226,7 +231,15 @@ final class PlaybackQualityManager {
                 return
             }
             #endif
-            if self.delegate?.playerInfo?.hlsURL != nil {
+            let overlayHeights = Set(self.playableOverlayFormats.map(\.height))
+            if TVOSPlaybackPolicy.usesProgressiveHighResPath(
+                height: format?.height,
+                hlsVariantHeights: Set(self.hlsVariantURLs.keys),
+                overlayHeights: overlayHeights
+            ) {
+                await self.reloadDASHItem(
+                    seekTo: savedTime, format: format, infoOverride: self.highResOverlayInfo)
+            } else if self.delegate?.playerInfo?.hlsURL != nil {
                 await self.reloadHLSItem(seekTo: savedTime, quality: quality)
             } else {
                 await self.reloadDASHItem(seekTo: savedTime, format: format)
@@ -347,10 +360,35 @@ final class PlaybackQualityManager {
         return asset
     }
 
+    /// Progressive 1440p/2160p overlay rows, honouring `preferH264`.
+    var playableOverlayFormats: [VideoFormat] {
+        let formats = highResOverlayInfo?.formats ?? []
+        let filtered =
+            (delegate?.settings.preferH264 ?? false)
+            ? formats.filter { $0.mimeType.contains("avc1") }
+            : formats
+        return TVOSPlaybackPolicy.playableHighResFormats(from: filtered)
+    }
+
+    /// True while a 1440p/2160p overlay composition is the selected quality.
+    /// DASH failure must reload TVAuth HLS, not run 403 exhaustiveRetry (that
+    /// would throw away the working 1080p ladder).
+    var shouldFallbackHighResOverlayToHLS: Bool {
+        guard highResOverlayInfo != nil, delegate?.playerInfo?.hlsURL != nil else { return false }
+        let height = selectedFormat?.height ?? 0
+        return TVOSPlaybackPolicy.usesProgressiveHighResPath(
+            height: height,
+            hlsVariantHeights: Set(hlsVariantURLs.keys),
+            overlayHeights: Set(playableOverlayFormats.map(\.height))
+        )
+    }
+
     /// Switches quality for a DASH/MP4-only video (no HLS URL) by rebuilding the composition
     /// from the selected format's video URL and the best available adaptive audio URL.
-    private func reloadDASHItem(seekTo time: TimeInterval, format: VideoFormat?) async {
-        guard let info = delegate?.playerInfo else {
+    private func reloadDASHItem(
+        seekTo time: TimeInterval, format: VideoFormat?, infoOverride: PlayerInfo? = nil
+    ) async {
+        guard let info = infoOverride ?? delegate?.playerInfo else {
             playerLog.error("[quality] reloadDASHItem: playerInfo is nil — quality reload skipped")
             return
         }
@@ -358,16 +396,24 @@ final class PlaybackQualityManager {
 
         let label = format.map { "\($0.height)p" } ?? "Auto"
 
-        // Always resolve the video URL from playerInfo.formats (the client that
-        // successfully played) rather than using availableFormats' URL directly.
-        // Reason: availableFormats may retain URLs from a different client than
-        // playerInfo due to the max-count policy (e.g. TVAuth has 113 entries vs
-        // AndroidVR's 23, so TVAuth formats are preserved for picker display but
-        // their URLs return SABR binary data → AVFoundationErrorDomain -11828).
-        // Using playerInfo.formats guarantees the URL comes from the working client.
+        // Overlay 1440p/2160p: use the tapped format URL. `selectBestVideoFormat`
+        // with preferH264 would pick 1080p H.264 over 2160p AV1 at the same cap.
         let videoURL: URL?
-        if let fmt = format {
-            // Diagnostic: log all video/mp4 heights available in playerInfo for this switch.
+        if infoOverride != nil, let fmt = format, TVOSPlaybackPolicy.isAVPlayerDecodableProgressive(fmt),
+            let overlayURL = fmt.url
+        {
+            playerLog.notice(
+                "[quality] reloadDASHItem: overlay \(fmt.height)p \(fmt.codecShortLabel) url=\(overlayURL.absoluteString.prefix(80))"
+            )
+            videoURL = overlayURL
+        } else if let fmt = format {
+            // Always resolve the video URL from playerInfo.formats (the client that
+            // successfully played) rather than using availableFormats' URL directly.
+            // Reason: availableFormats may retain URLs from a different client than
+            // playerInfo due to the max-count policy (e.g. TVAuth has 113 entries vs
+            // AndroidVR's 23, so TVAuth formats are preserved for picker display but
+            // their URLs return SABR binary data → AVFoundationErrorDomain -11828).
+            // Using playerInfo.formats guarantees the URL comes from the working client.
             let infoMp4Heights = info.formats
                 .filter { $0.mimeType.hasPrefix("video/mp4") && !$0.mimeType.contains(", ") && $0.url != nil }
                 .map { "\($0.height)p" }

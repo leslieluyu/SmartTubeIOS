@@ -47,6 +47,9 @@ Naming a new module after a concept not listed here requires adding the term in 
 - **Quality (ABR hint, cap, override)** — *ABR hint* nudges adaptive bitrate selection; a *cap*
   is a hard ceiling (e.g. "never above 1080p"); an *override* is a per-video manual quality pin.
   None of these apply on the TOS-player path (YouTube's own player owns ABR there — ADR-0006).
+- **High-res overlay** — tvOS-only progressive 1440p/2160p formats fetched from Android or
+  WebCreator and merged into the TVAuth HLS quality picker. Played via AVPlayer composition;
+  HLS 1080p remains the fallback. VP9/SABR/`rqh=1` rows are excluded.
 - **Audio track / Caption track** — a selectable dubbed-audio or subtitle track on a video.
 - **Deep link / Pending action** — a *deep link* is an external entry point (share extension,
   Siri, Safari extension, URL scheme) that names a video/channel to open; a *pending action* is

@@ -19,6 +19,7 @@ undiscoverable until it is. Keep this under 100 lines; anything that doesn't fit
 | [explanation/hls-n-descrambler.md](explanation/hls-n-descrambler.md) | HLS n-parameter descrambling notes | unverified | 2026-09-11 |
 | [explanation/dash-quality-switch-tests.md](explanation/dash-quality-switch-tests.md) | DASH quality-switch test notes | unverified | 2026-09-11 |
 | [explanation/no-botguard.md](explanation/no-botguard.md) | Notes on avoiding BotGuard | unverified | 2026-09-11 |
+| [explanation/tvos-4k.md](explanation/tvos-4k.md) | tvOS 1440p/2160p overlay on TVAuth HLS | current | 2026-10-29 |
 | [explanation/reviewer-notes.md](explanation/reviewer-notes.md) | Code reviewer notes | unverified | 2026-09-11 |
 | [explanation/changelog-unreleased.md](explanation/changelog-unreleased.md) | Unreleased-changes draft notes | unverified | 2026-09-11 |
 | [explanation/task-89-short-detection-issue.md](explanation/task-89-short-detection-issue.md) | Shorts-detection issue investigation | unverified | 2026-09-11 |

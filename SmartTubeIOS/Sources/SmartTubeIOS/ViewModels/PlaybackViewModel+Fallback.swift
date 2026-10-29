@@ -1399,6 +1399,12 @@ extension PlaybackViewModel {
                 // Track whether the succeeded stream is muxed so quality-switch attempts
                 // can detect the state and trigger fresh WKWebView extraction (#210).
                 qualityManager.isMuxedFallback = isMuxedFallback
+                if isHLSManifest {
+                    scheduleTVOSHighResOverlay(for: video)
+                    #if os(tvOS)
+                    autoSelectHighResOverlayIfPreferred()
+                    #endif
+                }
                 return true
             case .failed:
                 let err = item.error.map { "\($0)" } ?? "nil"
@@ -1999,6 +2005,7 @@ extension PlaybackViewModel {
                     } else {
                         playerLog.error(
                             "❌ [quality/DASH] loadTracks timed out after 10s — triggering 403 recovery retry")
+                        if await revertHighResOverlayToHLSIfNeeded(seekTo: seekTo) { return }
                         selectedFormat = nil
                         if statsForNerdsVisible { updateStatsSnapshot() }
                         if let video = currentVideo {
@@ -2016,6 +2023,7 @@ extension PlaybackViewModel {
                 let sourceAudioTrack = aTracks.first
             else {
                 playerLog.error("❌ [quality/DASH] no tracks in remote assets — triggering 403 recovery retry")
+                if await revertHighResOverlayToHLSIfNeeded(seekTo: seekTo) { return }
                 selectedFormat = nil
                 if statsForNerdsVisible { updateStatsSnapshot() }
                 if let video = currentVideo {
@@ -2039,6 +2047,7 @@ extension PlaybackViewModel {
                     preferredTrackID: kCMPersistentTrackID_Invalid)
             else {
                 playerLog.error("❌ [quality/DASH] could not add composition tracks")
+                if await revertHighResOverlayToHLSIfNeeded(seekTo: seekTo) { return }
                 selectedFormat = nil
                 if statsForNerdsVisible { updateStatsSnapshot() }
                 return
@@ -2081,6 +2090,7 @@ extension PlaybackViewModel {
                     let itemError = compositeItem.error
                     let errStr = itemError.map { "\($0)" } ?? "nil"
                     playerLog.error("❌ [quality/DASH] AVPlayerItem failed: \(errStr) — triggering 403 recovery retry")
+                    if await revertHighResOverlayToHLSIfNeeded(seekTo: seekTo) { return }
                     selectedFormat = nil
                     if statsForNerdsVisible { updateStatsSnapshot() }
                     if let video = currentVideo {
@@ -2097,6 +2107,7 @@ extension PlaybackViewModel {
             }
         } catch {
             playerLog.error("❌ [quality/DASH] composition build error: \(error) — triggering 403 recovery retry")
+            if await revertHighResOverlayToHLSIfNeeded(seekTo: seekTo) { return }
             selectedFormat = nil
             if statsForNerdsVisible { updateStatsSnapshot() }
             if let video = currentVideo {
