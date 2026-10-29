@@ -20,8 +20,20 @@ struct TVOSPlayerChromeMetricsTests {
     func settingsPanelIsRightDrawer() {
         #expect(TVOSPlayerChromeMetrics.settingsPanelFitsRightThird)
         #expect(TVOSPlayerChromeMetrics.settingsPanelWidth < TVOSPlayerChromeMetrics.appleTV1080Width / 2)
-        #expect(TVOSPlayerChromeMetrics.settingsPanelWidth >= 360)
-        #expect(TVOSPlayerChromeMetrics.settingsPanelWidth <= 480)
+        #expect(TVOSPlayerChromeMetrics.settingsPanelWidth >= 320)
+        #expect(TVOSPlayerChromeMetrics.settingsPanelWidth <= 400)
+    }
+
+    @Test("settings drawer is dense, opaque, and edged rather than a letterboxed card")
+    func settingsDrawerIsDenseAndPartitioned() {
+        #expect(TVOSPlayerChromeMetrics.settingsDrawerIsDense)
+        #expect(TVOSPlayerChromeMetrics.settingsTitleFontSize <= 24)
+        #expect(TVOSPlayerChromeMetrics.settingsRowFontSize <= 20)
+        #expect(TVOSPlayerChromeMetrics.settingsRowVerticalPadding <= 10)
+        #expect(TVOSPlayerChromeMetrics.settingsPanelBackgroundOpacity >= 0.94)
+        #expect(TVOSPlayerChromeMetrics.settingsPanelEdgeWidth >= 1)
+        #expect(TVOSPlayerChromeMetrics.settingsScrimOpacity < 0.55)
+        #expect(TVOSPlayerChromeMetrics.settingsScrimOpacity > 0)
     }
 
     @Test("seek and play/pause keep enough layout space when denser")

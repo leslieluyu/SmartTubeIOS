@@ -95,6 +95,14 @@ extension PlayerView {
         #endif
     }
 
+    var settingsOverlayScrimOpacity: Double {
+        #if os(tvOS)
+        TVOSPlayerChromeMetrics.settingsScrimOpacity
+        #else
+        0.5
+        #endif
+    }
+
     // MARK: - More menu overlay
 
     /// Options / settings. On tvOS this is a YouTube-TV-style right-side panel;
@@ -106,7 +114,7 @@ extension PlayerView {
             "[moreMenu] rendering — video=\(currentVideo.id) availableFormats=\(vm.availableFormats.count) isSignedIn=\(authService.isSignedIn)"
         )
         return ZStack(alignment: overlayPanelAlignment) {
-            Color.black.opacity(0.5)
+            Color.black.opacity(settingsOverlayScrimOpacity)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss {
                     menuLog.notice("[moreMenu] background tap — dismissing")
@@ -145,9 +153,7 @@ extension PlayerView {
         #if os(tvOS)
         ScrollView { moreMenuScrollContent }
             .accessibilityIdentifier("player.moreMenu.scrollView")
-            .background(Color.black.opacity(TVOSPlayerChromeMetrics.settingsPanelBackgroundOpacity))
-            .frame(width: TVOSPlayerChromeMetrics.settingsPanelWidth)
-            .frame(maxHeight: .infinity, alignment: .top)
+            .modifier(PlayerOverlayPanelModifier(iOSMaxWidth: moreMenuPortraitWidth))
             .onExitCommand {
                 menuLog.notice("[moreMenu] onExitCommand fired — dismissing via Menu button")
                 showMoreMenu = false
@@ -186,17 +192,19 @@ extension PlayerView {
         let currentVideo = vm.playerInfo?.video ?? video
         VStack(spacing: 0) {
             #if os(tvOS)
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Settings")
-                    .font(.headline.weight(.semibold))
+                    .font(.system(size: TVOSPlayerChromeMetrics.settingsTitleFontSize, weight: .semibold))
+                    .foregroundStyle(.white)
                 Text(currentVideo.title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: TVOSPlayerChromeMetrics.settingsSubtitleFontSize))
+                    .foregroundStyle(.white.opacity(0.65))
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 22)
+            .padding(.horizontal, TVOSPlayerChromeMetrics.settingsRowHorizontalPadding)
+            .padding(.top, TVOSPlayerChromeMetrics.settingsTitleTopPadding)
+            .padding(.bottom, TVOSPlayerChromeMetrics.settingsTitleBottomPadding)
             #else
             // Centered title header
             VStack(spacing: 2) {
@@ -237,7 +245,11 @@ extension PlayerView {
             moreMenuCancelRow
         }
         .frame(maxWidth: .infinity)
+        #if os(tvOS)
+        .font(.system(size: TVOSPlayerChromeMetrics.settingsRowFontSize, weight: .medium))
+        #else
         .font(.subheadline)
+        #endif
     }
 
     private var moreMenuMaxHeight: CGFloat {
@@ -400,15 +412,13 @@ extension PlayerView {
                 )
                 .foregroundStyle(.secondary)
             }
-            .padding()
+            .playerSettingsMenuRowPadding()
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .playerSettingsRowButtonStyle()
         .foregroundStyle(.primary)
         .accessibilityIdentifier("player.moreMenu.speedRow")
         #if os(tvOS)
-        .background(moreMenuFocusedRow == .speed ? Color.gray.opacity(0.35) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
         .focused($moreMenuFocusedRow, equals: .speed)
         .prefersDefaultFocus(in: moreMenuNamespace)
         #endif
@@ -432,14 +442,12 @@ extension PlayerView {
                     )
                     .foregroundStyle(.secondary)
                 }
-                .padding()
+                .playerSettingsMenuRowPadding()
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .playerSettingsRowButtonStyle()
             .foregroundStyle(.primary)
             .accessibilityIdentifier("player.moreMenu.qualityRow")
-            .background(moreMenuFocusedRow == .quality ? Color.gray.opacity(0.35) : .clear)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
             .focused($moreMenuFocusedRow, equals: .quality)
             Divider()
         }
@@ -467,15 +475,13 @@ extension PlayerView {
                             ? "\(AppSymbol.thumbsUp).fill" : AppSymbol.thumbsUp
                     )
                     .frame(maxWidth: .infinity)
-                    .padding()
+                    .playerSettingsMenuRowPadding()
                     .foregroundStyle(vm.likeStatus == .like ? Color.accentColor : .primary)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .playerSettingsRowButtonStyle()
                 .accessibilityIdentifier("player.moreMenu.likeRow")
                 #if os(tvOS)
-                .background(moreMenuFocusedRow == .like ? Color.gray.opacity(0.35) : .clear)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
                 .focused($moreMenuFocusedRow, equals: .like)
                 #endif
                 Divider().frame(height: 44)
@@ -489,15 +495,13 @@ extension PlayerView {
                             ? "\(AppSymbol.thumbsDown).fill" : AppSymbol.thumbsDown
                     )
                     .frame(maxWidth: .infinity)
-                    .padding()
+                    .playerSettingsMenuRowPadding()
                     .foregroundStyle(vm.likeStatus == .dislike ? Color.accentColor : .primary)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .playerSettingsRowButtonStyle()
                 .accessibilityIdentifier("player.moreMenu.dislikeRow")
                 #if os(tvOS)
-                .background(moreMenuFocusedRow == .dislike ? Color.gray.opacity(0.35) : .clear)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
                 .focused($moreMenuFocusedRow, equals: .dislike)
                 #endif
             }
@@ -515,10 +519,10 @@ extension PlayerView {
         } label: {
             Label("Share", systemImage: AppSymbol.share)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
+                .playerSettingsMenuRowPadding()
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .playerSettingsRowButtonStyle()
         .foregroundStyle(.primary)
         Divider()
         #endif
@@ -541,15 +545,13 @@ extension PlayerView {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding()
+            .playerSettingsMenuRowPadding()
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .playerSettingsRowButtonStyle()
         .foregroundStyle(.primary)
         .accessibilityIdentifier("player.moreMenu.sleepTimerRow")
         #if os(tvOS)
-        .background(moreMenuFocusedRow == .sleepTimer ? Color.gray.opacity(0.35) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
         .focused($moreMenuFocusedRow, equals: .sleepTimer)
         #endif
         Divider()
@@ -577,15 +579,13 @@ extension PlayerView {
                         .foregroundStyle(Color.accentColor)
                 }
             }
-            .padding()
+            .playerSettingsMenuRowPadding()
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .playerSettingsRowButtonStyle()
         .foregroundStyle(.primary)
         .accessibilityIdentifier("player.moreMenu.audioOnlyRow")
         #if os(tvOS)
-        .background(moreMenuFocusedRow == .audioOnly ? Color.gray.opacity(0.35) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
         .focused($moreMenuFocusedRow, equals: .audioOnly)
         #endif
         Divider()
@@ -613,15 +613,13 @@ extension PlayerView {
                             .foregroundStyle(Color.accentColor)
                     }
                 }
-                .padding()
+                .playerSettingsMenuRowPadding()
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .playerSettingsRowButtonStyle()
             .foregroundStyle(.primary)
             .accessibilityIdentifier("player.moreMenu.queueShuffleRow")
             #if os(tvOS)
-            .background(moreMenuFocusedRow == .queueShuffle ? Color.gray.opacity(0.35) : .clear)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
             .focused($moreMenuFocusedRow, equals: .queueShuffle)
             #endif
             Divider()
@@ -642,10 +640,10 @@ extension PlayerView {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .playerSettingsMenuRowPadding()
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .playerSettingsRowButtonStyle()
         .foregroundStyle(.primary)
         .disabled(downloadService.state.isActive)
         .accessibilityIdentifier("player.moreMenu.downloadButton")
@@ -669,15 +667,13 @@ extension PlayerView {
                     )
                     .foregroundStyle(.secondary)
                 }
-                .padding()
+                .playerSettingsMenuRowPadding()
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .playerSettingsRowButtonStyle()
             .foregroundStyle(.primary)
             .accessibilityIdentifier("player.moreMenu.captionsRow")
             #if os(tvOS)
-            .background(moreMenuFocusedRow == .captions ? Color.gray.opacity(0.35) : .clear)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
             .focused($moreMenuFocusedRow, equals: .captions)
             #endif
             Divider()
@@ -700,15 +696,13 @@ extension PlayerView {
                     )
                     .foregroundStyle(.secondary)
                 }
-                .padding()
+                .playerSettingsMenuRowPadding()
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .playerSettingsRowButtonStyle()
             .foregroundStyle(.primary)
             .accessibilityIdentifier("player.moreMenu.audioTrackRow")
             #if os(tvOS)
-            .background(moreMenuFocusedRow == .audioTrack ? Color.gray.opacity(0.35) : .clear)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
             .focused($moreMenuFocusedRow, equals: .audioTrack)
             #endif
             Divider()
@@ -724,15 +718,13 @@ extension PlayerView {
             } label: {
                 Label("Description", systemImage: "text.alignleft")
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
+                    .playerSettingsMenuRowPadding()
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .playerSettingsRowButtonStyle()
             .foregroundStyle(.primary)
             .accessibilityIdentifier("player.moreMenu.descriptionRow")
             #if os(tvOS)
-            .background(moreMenuFocusedRow == .description ? Color.gray.opacity(0.35) : .clear)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
             .focused($moreMenuFocusedRow, equals: .description)
             #endif
             Divider()
@@ -747,15 +739,13 @@ extension PlayerView {
         } label: {
             Label("Comments", systemImage: "bubble.left.and.bubble.right")
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
+                .playerSettingsMenuRowPadding()
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .playerSettingsRowButtonStyle()
         .foregroundStyle(.primary)
         .accessibilityIdentifier("player.moreMenu.commentsRow")
         #if os(tvOS)
-        .background(moreMenuFocusedRow == .comments ? Color.gray.opacity(0.35) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
         .focused($moreMenuFocusedRow, equals: .comments)
         #endif
         Divider()
@@ -775,15 +765,13 @@ extension PlayerView {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .playerSettingsMenuRowPadding()
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .playerSettingsRowButtonStyle()
         .foregroundStyle(.primary)
         .accessibilityIdentifier("player.moreMenu.statsForNerds")
         #if os(tvOS)
-        .background(moreMenuFocusedRow == .statsForNerds ? Color.gray.opacity(0.35) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
         .focused($moreMenuFocusedRow, equals: .statsForNerds)
         #endif
         Divider()
@@ -795,23 +783,22 @@ extension PlayerView {
         } label: {
             Text("Cancel")
                 .frame(maxWidth: .infinity)
-                .padding()
+                .playerSettingsMenuRowPadding()
                 .fontWeight(.semibold)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .playerSettingsRowButtonStyle()
         .foregroundStyle(.primary)
         .accessibilityIdentifier("player.moreMenu.cancel")
         #if os(tvOS)
-        .background(moreMenuFocusedRow == .cancel ? Color.gray.opacity(0.35) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
         .focused($moreMenuFocusedRow, equals: .cancel)
         #endif
     }
 }
 
 /// Chrome for in-player settings / quality / speed pickers.
-/// tvOS: right-side YouTube TV drawer. iOS: bottom material sheet.
+/// tvOS: opaque right drawer with a leading edge over fullscreen (dimmed) video.
+/// iOS: bottom material sheet.
 struct PlayerOverlayPanelModifier: ViewModifier {
     var iOSMaxWidth: CGFloat
 
@@ -821,6 +808,15 @@ struct PlayerOverlayPanelModifier: ViewModifier {
             .frame(width: TVOSPlayerChromeMetrics.settingsPanelWidth)
             .frame(maxHeight: .infinity, alignment: .top)
             .background(Color.black.opacity(TVOSPlayerChromeMetrics.settingsPanelBackgroundOpacity))
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.white.opacity(TVOSPlayerChromeMetrics.settingsPanelEdgeOpacity))
+                    .frame(width: TVOSPlayerChromeMetrics.settingsPanelEdgeWidth)
+                    .allowsHitTesting(false)
+            }
+            .clipShape(Rectangle())
+            .focusEffectDisabled()
+            .ignoresSafeArea(edges: .vertical)
         #else
         content
             .frame(maxWidth: iOSMaxWidth)

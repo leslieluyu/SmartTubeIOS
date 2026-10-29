@@ -10,9 +10,10 @@ private let pickerLog = CrashlyticsLogger(category: "PlayerMenu")
 
 // MARK: - PlayerView picker overlays + share sheet
 //
-// Pure-SwiftUI bottom-sheet overlays for all media settings pickers.
-// Rendered inside the player's ZStack — no UIKit sheet presentation fires
-// onDisappear and tears down playback.
+// Pure-SwiftUI overlays for all media settings pickers.
+// tvOS: dense right-side drawer over fullscreen dimmed video.
+// iOS: bottom sheet. Rendered inside the player's ZStack so no UIKit
+// sheet presentation fires onDisappear and tears down playback.
 //
 // Includes:
 //   • qualityPickerOverlay       — video quality selection
@@ -24,27 +25,43 @@ private let pickerLog = CrashlyticsLogger(category: "PlayerMenu")
 
 extension PlayerView {
 
+    @ViewBuilder
+    func playerPickerHeader(title: String, dismiss: @escaping () -> Void) -> some View {
+        #if os(tvOS)
+        TVOSSettingsPanelHeader(title: title)
+            .onExitCommand(perform: dismiss)
+        Divider().opacity(0.35)
+        #else
+        HStack {
+            Button("Cancel") { dismiss() }
+                .padding()
+            Spacer()
+            Text(title)
+                .fontWeight(.semibold)
+            Spacer()
+            Color.clear.frame(width: 70, height: 44)
+        }
+        Divider()
+        #endif
+    }
+
+    func pickerListMaxHeight(_ iOSMax: CGFloat = 320) -> CGFloat {
+        #if os(tvOS)
+        .infinity
+        #else
+        iOSMax
+        #endif
+    }
+
     // MARK: - Quality picker overlay
 
     var qualityPickerOverlay: some View {
         ZStack(alignment: overlayPanelAlignment) {
-            Color.black.opacity(0.5)
+            Color.black.opacity(settingsOverlayScrimOpacity)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showQualityPicker = false }
             VStack(spacing: 0) {
-                HStack {
-                    Button("Cancel") { showQualityPicker = false }
-                        #if os(tvOS)
-                    .buttonStyle(PickerHeaderButtonStyle())
-                        #endif
-                        .padding()
-                    Spacer()
-                    Text("Quality")
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Color.clear.frame(width: 70, height: 44)
-                }
-                Divider()
+                playerPickerHeader(title: "Quality", dismiss: { showQualityPicker = false })
                 ScrollView {
                     VStack(spacing: 0) {
                         Button {
@@ -64,10 +81,9 @@ extension PlayerView {
                                 }
                             }
                             .contentShape(Rectangle())
-                            .padding(.horizontal)
-                            .padding(.vertical, 12)
+                            .playerSettingsRowLabelInsets()
                         }
-                        .buttonStyle(.plain)
+                        .playerSettingsRowButtonStyle()
                         #if os(tvOS)
                         .prefersDefaultFocus(in: qualityPickerNamespace)
                         #endif
@@ -96,10 +112,9 @@ extension PlayerView {
                                     }
                                 }
                                 .contentShape(Rectangle())
-                                .padding(.horizontal)
-                                .padding(.vertical, 12)
+                                .playerSettingsRowLabelInsets()
                             }
-                            .buttonStyle(.plain)
+                            .playerSettingsRowButtonStyle()
                             // Explicit accessibility label keeps XCTest queries like
                             // `label BEGINSWITH "720p"` working even when the button HStack
                             // contains multiple Text views (e.g. the codec short label).
@@ -108,7 +123,7 @@ extension PlayerView {
                         }
                     }
                 }
-                .frame(maxHeight: 320)
+                .frame(maxHeight: pickerListMaxHeight())
                 #if os(tvOS)
                 .prefersDefaultFocus(in: qualityPickerNamespace)
                 .focused($qualityPickerFocused)
@@ -136,23 +151,11 @@ extension PlayerView {
 
     var speedPickerOverlay: some View {
         ZStack(alignment: overlayPanelAlignment) {
-            Color.black.opacity(0.5)
+            Color.black.opacity(settingsOverlayScrimOpacity)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showSpeedPicker = false }
             VStack(spacing: 0) {
-                HStack {
-                    Button("Cancel") { showSpeedPicker = false }
-                        #if os(tvOS)
-                    .buttonStyle(PickerHeaderButtonStyle())
-                        #endif
-                        .padding()
-                    Spacer()
-                    Text("Playback Speed")
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Color.clear.frame(width: 70, height: 44)
-                }
-                Divider()
+                playerPickerHeader(title: "Playback Speed", dismiss: { showSpeedPicker = false })
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(AppSettings.availableSpeeds, id: \.self) { (speed: Double) in
@@ -171,15 +174,14 @@ extension PlayerView {
                                     }
                                 }
                                 .contentShape(Rectangle())
-                                .padding(.horizontal)
-                                .padding(.vertical, 12)
+                                .playerSettingsRowLabelInsets()
                             }
-                            .buttonStyle(.plain)
+                            .playerSettingsRowButtonStyle()
                             Divider()
                         }
                     }
                 }
-                .frame(maxHeight: 320)
+                .frame(maxHeight: pickerListMaxHeight())
                 #if os(tvOS)
                 .prefersDefaultFocus(in: speedPickerNamespace)
                 .focused($speedPickerFocused)
@@ -202,23 +204,11 @@ extension PlayerView {
 
     var sleepTimerPickerOverlay: some View {
         ZStack(alignment: overlayPanelAlignment) {
-            Color.black.opacity(0.5)
+            Color.black.opacity(settingsOverlayScrimOpacity)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showSleepTimerPicker = false }
             VStack(spacing: 0) {
-                HStack {
-                    Button("Cancel") { showSleepTimerPicker = false }
-                        #if os(tvOS)
-                    .buttonStyle(PickerHeaderButtonStyle())
-                        #endif
-                        .padding()
-                    Spacer()
-                    Text("Sleep Timer")
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Color.clear.frame(width: 70, height: 44)
-                }
-                Divider()
+                playerPickerHeader(title: "Sleep Timer", dismiss: { showSleepTimerPicker = false })
                 VStack(spacing: 0) {
                     Button {
                         vm.setSleepTimer(minutes: nil)
@@ -234,10 +224,9 @@ extension PlayerView {
                             }
                         }
                         .contentShape(Rectangle())
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
+                        .playerSettingsRowLabelInsets()
                     }
-                    .buttonStyle(.plain)
+                    .playerSettingsRowButtonStyle()
                     #if os(tvOS)
                     .prefersDefaultFocus(in: sleepTimerNamespace)
                     .focused($sleepTimerPickerFocused)
@@ -258,14 +247,13 @@ extension PlayerView {
                                 }
                             }
                             .contentShape(Rectangle())
-                            .padding(.horizontal)
-                            .padding(.vertical, 12)
+                            .playerSettingsRowLabelInsets()
                         }
-                        .buttonStyle(.plain)
+                        .playerSettingsRowButtonStyle()
                         Divider()
                     }
                 }
-                .frame(maxHeight: 320)
+                .frame(maxHeight: pickerListMaxHeight())
             }
             .modifier(PlayerOverlayPanelModifier(iOSMaxWidth: moreMenuPortraitWidth))
             .accessibilityIdentifier("player.sleepTimerPicker")
@@ -284,23 +272,11 @@ extension PlayerView {
 
     var captionPickerOverlay: some View {
         ZStack(alignment: overlayPanelAlignment) {
-            Color.black.opacity(0.5)
+            Color.black.opacity(settingsOverlayScrimOpacity)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showCaptionPicker = false }
             VStack(spacing: 0) {
-                HStack {
-                    Button("Cancel") { showCaptionPicker = false }
-                        #if os(tvOS)
-                    .buttonStyle(PickerHeaderButtonStyle())
-                        #endif
-                        .padding()
-                    Spacer()
-                    Text("Captions")
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Color.clear.frame(width: 70, height: 44)
-                }
-                Divider()
+                playerPickerHeader(title: "Captions", dismiss: { showCaptionPicker = false })
                 ScrollView {
                     VStack(spacing: 0) {
                         // Off row
@@ -318,10 +294,9 @@ extension PlayerView {
                                 }
                             }
                             .contentShape(Rectangle())
-                            .padding(.horizontal)
-                            .padding(.vertical, 12)
+                            .playerSettingsRowLabelInsets()
                         }
-                        .buttonStyle(.plain)
+                        .playerSettingsRowButtonStyle()
                         .accessibilityIdentifier("player.captionPicker.off")
                         #if os(tvOS)
                         .prefersDefaultFocus(in: captionPickerNamespace)
@@ -349,16 +324,15 @@ extension PlayerView {
                                     }
                                 }
                                 .contentShape(Rectangle())
-                                .padding(.horizontal)
-                                .padding(.vertical, 12)
+                                .playerSettingsRowLabelInsets()
                             }
-                            .buttonStyle(.plain)
+                            .playerSettingsRowButtonStyle()
                             .accessibilityIdentifier("player.captionPicker.track.\(track.id)")
                             Divider()
                         }
                     }
                 }
-                .frame(maxHeight: 360)
+                .frame(maxHeight: pickerListMaxHeight(360))
                 #if os(tvOS)
                 .focused($captionPickerFocused)
                 #endif
@@ -377,23 +351,11 @@ extension PlayerView {
 
     var audioTrackPickerOverlay: some View {
         ZStack(alignment: overlayPanelAlignment) {
-            Color.black.opacity(0.5)
+            Color.black.opacity(settingsOverlayScrimOpacity)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showAudioTrackPicker = false }
             VStack(spacing: 0) {
-                HStack {
-                    Button("Cancel") { showAudioTrackPicker = false }
-                        #if os(tvOS)
-                    .buttonStyle(PickerHeaderButtonStyle())
-                        #endif
-                        .padding()
-                    Spacer()
-                    Text("Audio Track")
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Color.clear.frame(width: 70, height: 44)
-                }
-                Divider()
+                playerPickerHeader(title: "Audio Track", dismiss: { showAudioTrackPicker = false })
                 ScrollView {
                     VStack(spacing: 0) {
                         // "Auto" row — resets to HLS default and clears the saved preference
@@ -411,10 +373,9 @@ extension PlayerView {
                                 }
                             }
                             .contentShape(Rectangle())
-                            .padding(.horizontal)
-                            .padding(.vertical, 12)
+                            .playerSettingsRowLabelInsets()
                         }
-                        .buttonStyle(.plain)
+                        .playerSettingsRowButtonStyle()
                         .accessibilityIdentifier("player.audioTrackPicker.auto")
                         #if os(tvOS)
                         .prefersDefaultFocus(in: audioTrackPickerNamespace)
@@ -442,16 +403,15 @@ extension PlayerView {
                                     }
                                 }
                                 .contentShape(Rectangle())
-                                .padding(.horizontal)
-                                .padding(.vertical, 12)
+                                .playerSettingsRowLabelInsets()
                             }
-                            .buttonStyle(.plain)
+                            .playerSettingsRowButtonStyle()
                             .accessibilityIdentifier("player.audioTrackPicker.track.\(track.id)")
                             Divider()
                         }
                     }
                 }
-                .frame(maxHeight: 360)
+                .frame(maxHeight: pickerListMaxHeight(360))
                 #if os(tvOS)
                 .focused($audioTrackPickerFocused)
                 #endif
@@ -496,31 +456,3 @@ extension PlayerView {
     }
     #endif
 }
-
-#if os(tvOS)
-// MARK: - PickerHeaderButtonStyle (tvOS)
-
-/// Flat style for the Cancel button in picker sheet headers. The default tvOS
-/// button style renders a bright white platter that clashes with the dark
-/// sheet material; this shows a gray highlight when focused instead, matching
-/// the more-menu row treatment.
-struct PickerHeaderButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        PickerHeaderButtonLabel(configuration: configuration)
-    }
-
-    private struct PickerHeaderButtonLabel: View {
-        @Environment(\.isFocused) private var isFocused
-        let configuration: ButtonStyle.Configuration
-
-        var body: some View {
-            configuration.label
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isFocused ? Color.gray.opacity(0.35) : .clear)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-}
-#endif

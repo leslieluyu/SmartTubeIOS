@@ -364,43 +364,24 @@ extension PlayerView {
                         "[tv] onMoveCommand dir=\(String(describing: direction)) isTransitioning=\(isTransitioning) highlighted=\(String(describing: highlightedControl))"
                     )
                     guard !isTransitioning else { return }
-                    if let current = highlightedControl {
-                        // Transport left/right seek (YouTube Apple TV). Other directions
-                        // move the software highlight between bottom-bar buttons.
-                        if let move = TVOSMoveDirection(direction),
-                            TVOSPlayerControlPolicy.seeksInsteadOfMovingHighlight(
-                                control: current, direction: move)
-                        {
-                            switch move {
-                            case .left: vm.seekRelative(seconds: -Double(store.settings.seekBackSeconds))
-                            case .right: vm.seekRelative(seconds: Double(store.settings.seekForwardSeconds))
-                            default: break
-                            }
-                            vm.showControls()
-                        } else {
-                            highlightedControl = tvNextControl(from: current, direction: direction)
-                            vm.showControls()
-                        }
-                    } else if vm.controlsVisible {
-                        // Controls visible but nav not started yet.
-                        // Left/right seeks directly (Siri Remote gen 1 edge-tap and D-pad seek UX);
-                        // up/down enters control-navigation mode so the user can reach other buttons.
-                        switch direction {
+                    guard let move = TVOSMoveDirection(direction) else { return }
+                    switch TVOSPlayerControlPolicy.outcome(
+                        chromeVisible: vm.controlsVisible,
+                        highlighted: highlightedControl,
+                        direction: move)
+                    {
+                    case .seek:
+                        switch move {
                         case .left: vm.seekRelative(seconds: -Double(store.settings.seekBackSeconds))
                         case .right: vm.seekRelative(seconds: Double(store.settings.seekForwardSeconds))
-                        default:
-                            highlightedControl = .playPause
+                        default: break
+                        }
+                        if vm.controlsVisible {
                             vm.showControls()
                         }
-                    } else {
-                        // Controls hidden: left/right seek, up/down shows controls.
-                        switch direction {
-                        case .left: vm.seekRelative(seconds: -10)
-                        case .right: vm.seekRelative(seconds: 10)
-                        default:
-                            vm.showControls()
-                            highlightedControl = .playPause
-                        }
+                    case .highlight(let control):
+                        highlightedControl = control
+                        vm.showControls()
                     }
                 }
             )
@@ -411,12 +392,11 @@ extension PlayerView {
                 guard !isAnyOverlayVisible && !isSkipToastActive else { return }
                 if let current = highlightedControl {
                     tvActivateControl(current)
-                } else if vm.controlsVisible {
-                    highlightedControl = .playPause
-                    vm.showControls()
                 } else {
+                    // Chrome hidden, or visible without a software highlight:
+                    // Select reveals the bar on Play/Pause (does not toggle playback).
+                    highlightedControl = TVOSPlayerControlPolicy.defaultChromeFocus
                     vm.showControls()
-                    highlightedControl = .playPause
                 }
             }
             .onPlayPauseCommand { vm.togglePlayPause() }

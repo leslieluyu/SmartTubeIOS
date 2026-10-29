@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - PlayerView tvOS extensions
 //
 // All tvOS-specific logic for PlayerView: the control navigation model,
-// the Siri Remote key handlers (tvNextControl / tvActivateControl),
+// the Siri Remote key handlers (tvActivateControl),
 // and the custom tvOS progress bar layout.
 // Body modifiers (.focusable, .onMoveCommand, etc.) and stored properties
 // (@FocusState, @State highlightedControl) remain in PlayerView.swift because
@@ -81,17 +81,6 @@ extension PlayerView {
     /// handler's `vm.cancelControlsHide()` call is not triggered by the transient toast.
     var isSkipToastActive: Bool {
         vm.currentToastSegment != nil
-    }
-
-    // MARK: - Controls navigation
-
-    /// Returns the next control to highlight when the user presses a d-pad direction.
-    func tvNextControl(from current: TVPlayerControl, direction: MoveCommandDirection) -> TVPlayerControl {
-        guard let move = TVOSMoveDirection(direction) else { return current }
-        if TVOSPlayerControlPolicy.seeksInsteadOfMovingHighlight(control: current, direction: move) {
-            return current
-        }
-        return TVOSPlayerControlPolicy.next(from: current, direction: move)
     }
 
     // MARK: - Focus restore
@@ -207,6 +196,7 @@ extension PlayerView {
             toggleWatchLater()
         case .prevVideo: if vm.hasPrevious { vm.playPrevious() }
         case .nextVideo: if vm.hasNext { vm.playNext() }
+        case .scrubber: vm.togglePlayPause()
         }
     }
 
@@ -326,6 +316,7 @@ extension PlayerControlsOverlay {
 
                 progressBar
                     .accessibilityIdentifier("player.progressBar")
+                    .accessibilityAddTraits(highlightedControl == .scrubber ? .isSelected : [])
 
                 HStack(spacing: 16) {
                     HStack(spacing: metrics.transportSpacing) {
@@ -445,7 +436,8 @@ extension PlayerControlsOverlay {
     /// Custom progress bar for tvOS: larger thumb, wider padding, bigger time labels.
     /// The iOS variant (`iosProgressBar`) lives in PlayerView+ControlElements.swift.
     var tvProgressBar: some View {
-        VStack(spacing: 6) {
+        let scrubberFocused = highlightedControl == .scrubber
+        return VStack(spacing: 6) {
             // Scrub time tooltip
             GeometryReader { geo in
                 if vm.isScrubbing && vm.duration > 0 {
@@ -485,8 +477,14 @@ extension PlayerControlsOverlay {
                 let time = vm.isScrubbing ? vm.scrubTime : vm.currentTime
                 let progress = vm.duration > 0 ? CGFloat(time / vm.duration) : 0
                 let thumbX = hPad + trackW * progress
-                let trackH = TVOSPlayerChromeMetrics.progressTrackHeight
-                let thumb = TVOSPlayerChromeMetrics.progressThumb
+                let trackH =
+                    scrubberFocused
+                    ? TVOSPlayerChromeMetrics.progressTrackHeightFocused
+                    : TVOSPlayerChromeMetrics.progressTrackHeight
+                let thumb =
+                    scrubberFocused
+                    ? TVOSPlayerChromeMetrics.progressThumbFocused
+                    : TVOSPlayerChromeMetrics.progressThumb
 
                 ZStack {
                     // Background track
@@ -508,13 +506,20 @@ extension PlayerControlsOverlay {
                     Circle()
                         .fill(Color.white)
                         .frame(width: thumb, height: thumb)
-                        .shadow(color: .black.opacity(0.4), radius: 3)
+                        .shadow(
+                            color: scrubberFocused ? .white.opacity(0.85) : .black.opacity(0.4),
+                            radius: scrubberFocused ? 8 : 3)
                         .position(x: thumbX, y: geo.size.height / 2)
                 }
                 .overlay(sponsorBlockMarkers)
                 .overlay(chapterMarkers)
             }
-            .frame(height: TVOSPlayerChromeMetrics.progressTrackRowHeight)
+            .frame(
+                height: scrubberFocused
+                    ? max(TVOSPlayerChromeMetrics.progressTrackRowHeight, TVOSPlayerChromeMetrics.progressThumbFocused)
+                    : TVOSPlayerChromeMetrics.progressTrackRowHeight
+            )
+            .animation(.easeInOut(duration: 0.15), value: highlightedControl == .scrubber)
 
             // Time labels
             HStack {
