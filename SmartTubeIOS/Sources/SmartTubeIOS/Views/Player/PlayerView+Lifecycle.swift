@@ -344,11 +344,11 @@ extension PlayerView {
             // handles all remote input via onMoveCommand / onTapGesture.
             // When an overlay (more menu, quality, speed, sleep timer) is visible, focus is
             // yielded so the overlay's buttons are reachable by the Siri Remote.
-            // `.focusScope` + `.prefersDefaultFocus` ensure the ZStack actively claims
-            // default focus when pushed via NavigationStack, rather than waiting for the
-            // focus engine to pick a child element or leaving focus on the previous screen.
+            // `.focusScope` + gated `.prefersDefaultFocus` claim default focus when
+            // pushed via NavigationStack, but yield while a menu/picker/skip-toast
+            // is open so Select reaches overlay rows instead of the player body.
             .focusScope(playerBodyNamespace)
-            .prefersDefaultFocus(in: playerBodyNamespace)
+            .prefersDefaultFocus(!isAnyOverlayVisible && !isSkipToastActive, in: playerBodyNamespace)
             .focusable(!isAnyOverlayVisible && !isSkipToastActive)
             .focused($playerFocused)
             .modifier(
@@ -449,6 +449,9 @@ extension PlayerView {
             }
             .onChange(of: playerFocused) { _, focused in
                 swipeLog.notice("[tv] playerFocused changed → \(focused) isAnyOverlayVisible=\(isAnyOverlayVisible)")
+                if !focused {
+                    scheduleTVOSFocusReconcile()
+                }
             }
     }
 
@@ -578,6 +581,26 @@ extension PlayerView {
                 }
             }
     }
+
+    // Fourth split: restore Siri Remote focus after composition item swaps and
+    // overlay format-list merges, which can drop `@FocusState` without toggling
+    // `controlsVisible` / overlay flags.
+    private var tvosPlayerFocusRestoreModifiers: some View {
+        tvosPlayerChangeModifiers
+            .onChange(of: vm.isPlaying) { _, playing in
+                guard playing else { return }
+                swipeLog.notice("[tv] isPlaying=true — reconciling focus after item swap")
+                scheduleTVOSFocusReconcile()
+            }
+            .onChange(of: vm.isLoading) { _, loading in
+                guard !loading else { return }
+                swipeLog.notice("[tv] isLoading=false — reconciling focus")
+                scheduleTVOSFocusReconcile()
+            }
+            .onChange(of: vm.availableFormats.count) { _, _ in
+                scheduleTVOSFocusReconcile()
+            }
+    }
     #endif
 
     var bodyWithLifecycleModifiers: some View {
@@ -586,7 +609,7 @@ extension PlayerView {
         // avoid conditional-compilation mid-chain (not allowed outside @ViewBuilder).
         Group {
             #if os(tvOS)
-            tvosPlayerChangeModifiers
+            tvosPlayerFocusRestoreModifiers
                 .toolbar(.hidden, for: .tabBar)
             #elseif os(iOS)
             playerContentView

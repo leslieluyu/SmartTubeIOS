@@ -425,14 +425,22 @@ struct PlayerControlsOverlay: View {
                 endPoint: .bottom
             )
             .contentShape(Rectangle())
+            #if os(tvOS)
+            .allowsHitTesting(false)
+            .focusable(false)
+            #else
             .onTapGesture {
                 controlsLog.notice("[menu] gradient background tap — controlsVisible=\(vm.controlsVisible)")
                 vm.toggleControls()
             }
+            #endif
         )
         #if os(tvOS)
-        // Controls overlay is not a focus section — the outer view handles all input.
-        .onTapGesture { vm.toggleControls() }
+        // Software D-pad/Select on the player body owns the remote. A tap gesture
+        // here would become a full-screen focusable item and steal Select from
+        // `tvActivateControl` (options / quality never open).
+        .allowsHitTesting(false)
+        .focusable(false)
         #endif
     }
 }
@@ -463,6 +471,9 @@ extension PlayerControlsOverlay {
             .accessibilityElement()
             .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier(identifier)
+            // Software highlight (`highlightedControl`) owns Select; native focus
+            // on these chrome views would swallow the player body's onTapGesture.
+            .focusable(false)
     }
     #endif
 
@@ -664,10 +675,17 @@ extension PlayerControlsOverlay {
                         .frame(width: 2, height: 12)
                 }
                 .contentShape(Rectangle())
+                #if os(tvOS)
+                // `onTapGesture` makes each tick a focusable item on tvOS and can
+                // steal Select from the software-focus player chrome.
+                .focusable(false)
+                .allowsHitTesting(false)
+                #else
                 .onTapGesture {
                     guard !vm.isScrubbing else { return }
                     vm.seek(to: chapter.startTime)
                 }
+                #endif
                 .position(x: x, y: geo.size.height / 2)
             }
         }

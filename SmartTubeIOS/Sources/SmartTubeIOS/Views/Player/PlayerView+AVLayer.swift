@@ -66,6 +66,11 @@ struct PlayerAVLayerView: UIViewRepresentable {
         view.backgroundColor = .black
         view.isAccessibilityElement = false
         view.accessibilityElementsHidden = true
+        #if os(tvOS)
+        // Composition / 4K item swaps can make AVPlayerLayer the UIKit focused
+        // view, which swallows Select before SwiftUI `.onTapGesture` sees it.
+        view.isUserInteractionEnabled = false
+        #endif
         view.playerLayer.player = player
         view.playerLayer.videoGravity = videoGravity
         view.onLayerReady = onLayerReady
@@ -75,6 +80,9 @@ struct PlayerAVLayerView: UIViewRepresentable {
     func updateUIView(_ uiView: _PlayerUIView, context: Context) {
         uiView.playerLayer.player = player
         uiView.playerLayer.videoGravity = videoGravity
+        #if os(tvOS)
+        uiView.isUserInteractionEnabled = false
+        #endif
     }
 
     final class _PlayerUIView: UIView {
@@ -82,6 +90,10 @@ struct PlayerAVLayerView: UIViewRepresentable {
         var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
         var onLayerReady: ((AVPlayerLayer) -> Void)?
         private var didFireCallback = false
+        #if os(tvOS)
+        override var canBecomeFocused: Bool { false }
+        override var preferredFocusEnvironments: [UIFocusEnvironment] { [] }
+        #endif
 
         override func willMove(toWindow newWindow: UIWindow?) {
             super.willMove(toWindow: newWindow)

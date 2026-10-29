@@ -147,6 +147,93 @@ extension PlayerView {
         }
     }
 
+    // MARK: - Focus restore
+
+    /// Re-assert player or overlay focus after a late `@Observable` update (4K
+    /// overlay merge, composition item swap) can drop `@FocusState`. Delayed so
+    /// an opening menu can claim the remote first.
+    func scheduleTVOSFocusReconcile() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: TVOSPlayerFocusPolicy.restoreDelayNanoseconds)
+            reconcileTVOSFocus()
+        }
+    }
+
+    func reconcileTVOSFocus() {
+        let playerLog = CrashlyticsLogger(category: "Player")
+        guard
+            TVOSPlayerFocusPolicy.shouldKeepPlayerSessionFocus(
+                isVisible: isVisible,
+                hasPushedDestination: channelDestination != nil)
+        else { return }
+
+        if isAnyOverlayVisible {
+            if TVOSPlayerFocusPolicy.restoredMoreMenuRow(
+                overlayVisible: true,
+                moreMenuVisible: showMoreMenu,
+                currentRowIsNil: moreMenuFocusedRow == nil)
+            {
+                moreMenuFocusedRow = .speed
+                playerLog.notice("[tv] restored moreMenuFocusedRow → .speed")
+            }
+            if TVOSPlayerFocusPolicy.shouldRestorePickerFocus(
+                overlayVisible: true,
+                pickerVisible: showQualityPicker,
+                pickerFocused: qualityPickerFocused)
+            {
+                qualityPickerFocused = true
+                playerLog.notice("[tv] restored qualityPickerFocused")
+            }
+            if TVOSPlayerFocusPolicy.shouldRestorePickerFocus(
+                overlayVisible: true,
+                pickerVisible: showSpeedPicker,
+                pickerFocused: speedPickerFocused)
+            {
+                speedPickerFocused = true
+            }
+            if TVOSPlayerFocusPolicy.shouldRestorePickerFocus(
+                overlayVisible: true,
+                pickerVisible: showSleepTimerPicker,
+                pickerFocused: sleepTimerPickerFocused)
+            {
+                sleepTimerPickerFocused = true
+            }
+            if TVOSPlayerFocusPolicy.shouldRestorePickerFocus(
+                overlayVisible: true,
+                pickerVisible: showCaptionPicker,
+                pickerFocused: captionPickerFocused)
+            {
+                captionPickerFocused = true
+            }
+            if TVOSPlayerFocusPolicy.shouldRestorePickerFocus(
+                overlayVisible: true,
+                pickerVisible: showAudioTrackPicker,
+                pickerFocused: audioTrackPickerFocused)
+            {
+                audioTrackPickerFocused = true
+            }
+            return
+        }
+
+        if isSkipToastActive {
+            if !skipToastButtonFocused {
+                skipToastButtonFocused = true
+            }
+            return
+        }
+
+        if TVOSPlayerFocusPolicy.shouldRestorePlayerFocus(
+            playerFocused: playerFocused,
+            overlayVisible: false,
+            skipToastActive: false,
+            isVisible: isVisible,
+            hasPushedDestination: channelDestination != nil)
+        {
+            playerLog.notice("[tv] restoring playerFocused after unexpected loss")
+            playerFocused = true
+        }
+    }
+
     /// Executes the action for the currently highlighted control.
     func tvActivateControl(_ control: TVPlayerControl) {
         let playerLog = CrashlyticsLogger(category: "Player")

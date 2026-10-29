@@ -92,7 +92,7 @@ extension PlayerView {
         return ZStack(alignment: .bottom) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
-                .onTapGesture {
+                .playerOverlayScrimDismiss {
                     menuLog.notice("[moreMenu] background tap — dismissing")
                     showMoreMenu = false
                 }
@@ -232,7 +232,7 @@ extension PlayerView {
         return ZStack(alignment: .bottom) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
-                .onTapGesture { showDescriptionSheet = false }
+                .playerOverlayScrimDismiss { showDescriptionSheet = false }
 
             VStack(spacing: 0) {
                 HStack {

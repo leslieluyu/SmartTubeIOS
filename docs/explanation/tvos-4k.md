@@ -30,9 +30,11 @@ reloaded. Auto quality stays on HLS ABR.
 | **SABR** | TVHTML5 adaptive URLs (`c=TVHTML5`) and `serverAbrStreamingUrl` are skipped. They are UMP, not MP4. |
 | **Auth / BotGuard** | tvOS has no WKWebView BotGuard recovery. `rqh=1` URLs are skipped (`docs/explanation/no-botguard.md`). WebCreator may 400 with TV OAuth Bearer (it prefers SAPISIDHASH). Android may be bot-gated. Overlay failure does **not** replace TVAuth HLS. |
 | **VisionOS HLS** | Intentional 1080 H.264 cap; not used as the 4K path. |
+| **Remote / focus** | Overlay apply and composition item swaps can drop SwiftUI `@FocusState`. The player re-asserts Siri Remote focus when no overlay is open (`TVOSPlayerFocusPolicy`). Overlay dimmers are not focusable on tvOS (Menu/Back dismisses). Remaining: Simulator cannot decode AV1, so focus-after-4K-swap is device-only; skip-toast still takes Select while a SponsorBlock prompt is visible. |
 
 ## Code
 
 - Policy: `TVOSPlaybackPolicy` (`highResMinHeight`, `playableHighResFormats`, `usesProgressiveHighResPath`)
+- Focus: `TVOSPlayerFocusPolicy` (when the player body may reclaim Select vs an open overlay)
 - Fetch: `PlaybackViewModel+TVOSHighRes.swift`
 - Play: `PlaybackQualityManager.selectFormat` → DASH composition when the height is overlay-only

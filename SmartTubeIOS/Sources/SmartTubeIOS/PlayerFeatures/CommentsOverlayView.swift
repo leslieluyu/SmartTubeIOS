@@ -22,7 +22,7 @@ struct CommentsOverlayView: View {
         ZStack(alignment: .bottom) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
-                .onTapGesture { onDismiss() }
+                .playerOverlayScrimDismiss(onDismiss)
 
             VStack(spacing: 0) {
                 HStack {

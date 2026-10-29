@@ -30,7 +30,7 @@ extension PlayerView {
         ZStack(alignment: .bottom) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
-                .onTapGesture { showQualityPicker = false }
+                .playerOverlayScrimDismiss { showQualityPicker = false }
             VStack(spacing: 0) {
                 HStack {
                     Button("Cancel") { showQualityPicker = false }
@@ -142,7 +142,7 @@ extension PlayerView {
         ZStack(alignment: .bottom) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
-                .onTapGesture { showSpeedPicker = false }
+                .playerOverlayScrimDismiss { showSpeedPicker = false }
             VStack(spacing: 0) {
                 HStack {
                     Button("Cancel") { showSpeedPicker = false }
@@ -212,7 +212,7 @@ extension PlayerView {
         ZStack(alignment: .bottom) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
-                .onTapGesture { showSleepTimerPicker = false }
+                .playerOverlayScrimDismiss { showSleepTimerPicker = false }
             VStack(spacing: 0) {
                 HStack {
                     Button("Cancel") { showSleepTimerPicker = false }
@@ -298,7 +298,7 @@ extension PlayerView {
         ZStack(alignment: .bottom) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
-                .onTapGesture { showCaptionPicker = false }
+                .playerOverlayScrimDismiss { showCaptionPicker = false }
             VStack(spacing: 0) {
                 HStack {
                     Button("Cancel") { showCaptionPicker = false }
@@ -395,7 +395,7 @@ extension PlayerView {
         ZStack(alignment: .bottom) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
-                .onTapGesture { showAudioTrackPicker = false }
+                .playerOverlayScrimDismiss { showAudioTrackPicker = false }
             VStack(spacing: 0) {
                 HStack {
                     Button("Cancel") { showAudioTrackPicker = false }
