@@ -1,5 +1,6 @@
 // Shared settings for all targets. Secrets are optional so forks/CI build without them.
 #include? "Secrets.xcconfig"
+INFOPLIST_KEY_CFBundleDisplayName = iTube
 SWIFT_VERSION = 6.0
 SWIFT_STRICT_CONCURRENCY = complete
 IPHONEOS_DEPLOYMENT_TARGET = 17.0

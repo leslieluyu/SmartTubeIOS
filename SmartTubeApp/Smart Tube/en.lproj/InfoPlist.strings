@@ -1,0 +1,3 @@
+/* Display name on Apple TV Home, Settings, and SpringBoard. */
+"CFBundleDisplayName" = "iTube";
+"CFBundleName" = "iTube";

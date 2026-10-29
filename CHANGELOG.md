@@ -4,6 +4,13 @@ All notable changes to SmartTube are documented here.
 
 ---
 
+## Unreleased
+
+### Changed
+- **iTube branding (Apple TV / SpringBoard)** — display name is `iTube`; app icon is the navy framed-i artwork at all App Icon and App Icon TV sizes
+
+---
+
 ## [4.5] – 2026-06-11
 
 ### Added
