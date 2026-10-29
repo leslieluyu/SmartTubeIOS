@@ -12,6 +12,7 @@ All notable changes to SmartTube are documented here.
 - **tvOS fullscreen player** — left navigation rail is removed while a video is playing and restored on Back
 - **tvOS player chrome** — denser bottom transport; Settings / quality open as a right-side panel instead of a wide bottom strip
 - **tvOS player remote** — Left/Right seek only while chrome is hidden; with the bar up, Left/Right move among bottom icons and Up highlights the scrubber
+- **tvOS player chrome focus** — rewind (−N s) and forward (+N s) take the same software highlight as Play; Left/Right from Play lands on them; Select seeks. Chrome-hidden Left/Right still seek without moving highlight
 - **tvOS settings / quality drawer** — opaque narrow right panel with a leading edge over fullscreen dimmed video; denser title and row fonts for Options, quality, speed, captions, audio, and sleep
 
 ---

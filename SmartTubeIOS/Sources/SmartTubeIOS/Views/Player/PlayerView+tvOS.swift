@@ -196,6 +196,12 @@ extension PlayerView {
             toggleWatchLater()
         case .prevVideo: if vm.hasPrevious { vm.playPrevious() }
         case .nextVideo: if vm.hasNext { vm.playNext() }
+        case .seekBack:
+            vm.seekRelative(seconds: -Double(store.settings.seekBackSeconds))
+            vm.showControls()
+        case .seekForward:
+            vm.seekRelative(seconds: Double(store.settings.seekForwardSeconds))
+            vm.showControls()
         case .scrubber: vm.togglePlayPause()
         }
     }
@@ -250,9 +256,10 @@ extension PlayerControlsOverlay {
 
     // MARK: - YouTube-style bottom chrome
 
-    /// Bottom-aligned player bar: description, subscribe, transport, and
-    /// like / dislike / comments / save / options. Software highlight only —
-    /// native focus stays on the player body (4K overlay Select fix).
+    /// Bottom-aligned player bar: description, subscribe, transport
+    /// (prev · −N s · play · +N s · next), and like / dislike / comments /
+    /// save / options. Software highlight only — native focus stays on the
+    /// player body (4K overlay Select fix). Seek ± icons are in the L/R ring.
     var tvosBottomChrome: some View {
         let currentVideo = vm.playerInfo?.video ?? video
         let channelId = currentVideo.channelId ?? video.channelId
@@ -336,12 +343,12 @@ extension PlayerControlsOverlay {
                         seekButton(
                             symbol: "gobackward.\(store.settings.seekBackSeconds)",
                             seconds: -Double(store.settings.seekBackSeconds),
-                            tvHighlighted: false)
+                            tvHighlighted: highlightedControl == .seekBack)
                         playPauseButton
                         seekButton(
                             symbol: "goforward.\(store.settings.seekForwardSeconds)",
                             seconds: Double(store.settings.seekForwardSeconds),
-                            tvHighlighted: false)
+                            tvHighlighted: highlightedControl == .seekForward)
                         tvOverlayControl(
                             highlighted: highlightedControl == .nextVideo,
                             scale: metrics.skipHighlightScale,
