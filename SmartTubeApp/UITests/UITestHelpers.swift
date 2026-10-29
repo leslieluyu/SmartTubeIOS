@@ -211,3 +211,19 @@ extension XCTestCase {
         return element.exists
     }
 }
+
+#if os(tvOS)
+extension XCTestCase {
+    /// Home-loaded sentinel after the YouTube-style left rail replaced the chip bar.
+    /// Matches the rail, the home page, or the legacy chip-bar id.
+    func tvHomeSentinel(in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "identifier == 'tv.sidebar' OR identifier == 'home.screen' OR identifier == 'home.chipBar'"
+                )
+            )
+            .firstMatch
+    }
+}
+#endif

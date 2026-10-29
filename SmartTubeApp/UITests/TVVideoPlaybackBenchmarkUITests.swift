@@ -68,11 +68,9 @@ final class TVVideoPlaybackBenchmarkUITests: XCTestCase {
         let playerTitle = app.staticTexts["player.titleLabel"].firstMatch
 
         // ── Navigate to Home feed ─────────────────────────────────────────────
-        let chipBar = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == 'home.chipBar'"))
-            .firstMatch
+        let chipBar = tvHomeSentinel(in: app)
         guard chipBar.waitForExistence(timeout: 30) else {
-            try captureAndSkip("home.chipBar did not appear — app failed to reach Home", in: app)
+            try captureAndSkip("tv.sidebar / home.screen did not appear — app failed to reach Home", in: app)
         }
         let cardPredicate = NSPredicate(format: "identifier BEGINSWITH 'video.card.'")
         let cards = app.descendants(matching: .any).matching(cardPredicate)

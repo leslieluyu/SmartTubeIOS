@@ -40,10 +40,15 @@ struct PlayerControlsOverlay: View {
     #endif
     #if os(tvOS)
     @Binding var highlightedControl: PlayerView.TVPlayerControl?
+    let isChannelFollowed: Bool
+    let isSavedToWatchLater: Bool
     #endif
     @Environment(SettingsStore.self) var store
     @Environment(\.dismiss) var dismiss
     var body: some View {
+        #if os(tvOS)
+        tvosBottomChrome
+        #else
         VStack {
             // Top bar: back + title
             HStack {
@@ -441,6 +446,7 @@ struct PlayerControlsOverlay: View {
         // `tvActivateControl` (options / quality never open).
         .allowsHitTesting(false)
         .focusable(false)
+        #endif
         #endif
     }
 }

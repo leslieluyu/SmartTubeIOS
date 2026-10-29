@@ -47,9 +47,9 @@ final class TVMoreMenuNavigationUITests: XCTestCase {
     }
 
     private func waitForMoreMenu() throws {
-        let chipBar = element("home.chipBar")
+        let chipBar = tvHomeSentinel(in: app)
         guard chipBar.waitForExistence(timeout: 15) else {
-            try captureAndSkip("home.chipBar not found — app failed to launch", in: app)
+            try captureAndSkip("tv.sidebar / home.screen not found — app failed to launch", in: app)
         }
 
         // Navigate down to the first video card and select it.

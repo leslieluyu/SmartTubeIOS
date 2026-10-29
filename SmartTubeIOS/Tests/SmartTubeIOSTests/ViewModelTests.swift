@@ -381,6 +381,25 @@ struct HomeViewModelTests {
         #expect(vm.homeShortsVideos.map(\.id).contains("srt0_BBBB"))
     }
 
+    @Test("featured hero is the first recommended regular video; shelf drops that hero")
+    func featuredHeroAndRecommendedShelf() async {
+        let mock = MockInnerTubeAPI()
+        let recs = (0..<4).map { makeVideo("rec\($0)_HEROAA") }
+        let subs = (0..<2).map { makeVideo("sub\($0)_HEROBB") }
+        mock.homeRowsResult = [VideoGroup(title: "Rec", videos: recs)]
+        mock.subscriptionsResult = VideoGroup(title: "Subs", videos: subs)
+
+        let vm = HomeViewModel(api: mock)
+        defer { vm.cancel() }
+        vm.load()
+        await waitForTasks()
+
+        #expect(vm.featuredHeroVideo?.id == "rec0_HEROAA")
+        #expect(vm.recommendedShelfVideos.map(\.id) == ["rec1_HEROAA", "rec2_HEROAA", "rec3_HEROAA"])
+        #expect(vm.subscriptionRegularVideos.map(\.id) == ["sub0_HEROBB", "sub1_HEROBB"])
+        #expect(!vm.recommendedShelfVideos.contains(where: { $0.id == vm.featuredHeroVideo?.id }))
+    }
+
     @Test("loadMoreShortsIfNeeded auto-fetches next page when shorts < 6")
     func loadMoreShortsAutoFetchWhenBelowThreshold() async {
         let mock = MockInnerTubeAPI()

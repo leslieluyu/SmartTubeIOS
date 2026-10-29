@@ -12,6 +12,18 @@ import SwiftUI
 
 #if os(tvOS)
 
+extension TVOSMoveDirection {
+    init?(_ direction: MoveCommandDirection) {
+        switch direction {
+        case .left: self = .left
+        case .right: self = .right
+        case .up: self = .up
+        case .down: self = .down
+        @unknown default: return nil
+        }
+    }
+}
+
 // MARK: - ConditionalMoveCommand
 
 /// Conditionally applies `.onMoveCommand`. When `enabled = false` the modifier is
@@ -48,30 +60,10 @@ extension PlayerView {
             audioTrack, description, comments, statsForNerds, cancel
     }
 
-    // MARK: - TVPlayerControl
-
-    /// Represents each focusable control button in the tvOS overlay.
-    /// Navigation between controls is handled entirely in software via
-    /// `tvNextControl(from:direction:)` rather than SwiftUI's native focus
-    /// engine, giving full control over the d-pad routing logic.
-    enum TVPlayerControl: Equatable {
-        case back, channel, more  // top row
-        case seekBack, playPause, seekForward  // centre row
-        case prevVideo, prevChapter, nextChapter, nextVideo  // bottom row
-
-        var isTopRow: Bool {
-            switch self {
-            case .back, .channel, .more: true
-            default: false
-            }
-        }
-        var isCenterRow: Bool {
-            switch self {
-            case .seekBack, .playPause, .seekForward: true
-            default: false
-            }
-        }
-    }
+    /// Software-highlight target in the YouTube-style bottom bar.
+    /// Alias of `TVOSPlayerControl` so existing `PlayerView.TVPlayerControl`
+    /// call sites (overlay, UI tests' identifiers) keep compiling.
+    typealias TVPlayerControl = TVOSPlayerControl
 
     // MARK: - Overlay state
 
@@ -95,56 +87,11 @@ extension PlayerView {
 
     /// Returns the next control to highlight when the user presses a d-pad direction.
     func tvNextControl(from current: TVPlayerControl, direction: MoveCommandDirection) -> TVPlayerControl {
-        switch direction {
-        case .left:
-            switch current {
-            // top row
-            case .more: return .channel
-            case .channel: return .back
-            // center row
-            case .playPause: return .seekBack
-            case .seekForward: return .playPause
-            // bottom row
-            case .prevChapter: return .prevVideo
-            case .nextChapter: return .prevChapter
-            case .nextVideo: return vm.chapters.isEmpty ? .prevVideo : .nextChapter
-            default: return current
-            }
-        case .right:
-            switch current {
-            // top row
-            case .back: return .channel
-            case .channel: return .more
-            // center row
-            case .seekBack: return .playPause
-            case .playPause: return .seekForward
-            // bottom row
-            case .prevVideo: return vm.chapters.isEmpty ? .nextVideo : .prevChapter
-            case .prevChapter: return .nextChapter
-            case .nextChapter: return .nextVideo
-            default: return current
-            }
-        case .up:
-            if current.isCenterRow { return .more }  // center → top row
-            if !current.isCenterRow && !current.isTopRow {
-                // bottom row → center row (map by position)
-                switch current {
-                case .prevVideo, .prevChapter: return .seekBack
-                default: return .seekForward
-                }
-            }
-            return current  // already at top
-        case .down:
-            if current.isTopRow { return .playPause }  // top row → center row
-            if current.isCenterRow {  // center row → bottom row
-                switch current {
-                case .seekBack: return vm.chapters.isEmpty ? .prevVideo : .prevChapter
-                default: return vm.chapters.isEmpty ? .nextVideo : .nextChapter
-                }
-            }
-            return current  // already at bottom
-        @unknown default: return current
+        guard let move = TVOSMoveDirection(direction) else { return current }
+        if TVOSPlayerControlPolicy.seeksInsteadOfMovingHighlight(control: current, direction: move) {
+            return current
         }
+        return TVOSPlayerControlPolicy.next(from: current, direction: move)
     }
 
     // MARK: - Focus restore
@@ -238,30 +185,259 @@ extension PlayerView {
     func tvActivateControl(_ control: TVPlayerControl) {
         let playerLog = CrashlyticsLogger(category: "Player")
         playerLog.notice("[tv] tvActivateControl(\(String(describing: control)))")
+        let currentVideo = vm.playerInfo?.video ?? video
         switch control {
-        case .back:
-            vm.stop()
-            withAnimation(.none) { dismiss() }
         case .channel:
-            let channelId = vm.playerInfo?.video.channelId ?? video.channelId
+            let channelId = currentVideo.channelId ?? video.channelId
             if let cid = channelId, !cid.isEmpty { channelDestination = ChannelDestination(channelId: cid) }
+        case .subscribe:
+            toggleChannelFollow()
         case .more:
             playerLog.notice("[tv] .more activated — setting showMoreMenu=true")
             showMoreMenu = true
             highlightedControl = nil
-        case .seekBack: vm.seekRelative(seconds: -Double(store.settings.seekBackSeconds))
         case .playPause: vm.togglePlayPause()
-        case .seekForward: vm.seekRelative(seconds: Double(store.settings.seekForwardSeconds))
+        case .like: vm.like()
+        case .dislike: vm.dislike()
+        case .comments:
+            showCommentsSheet = true
+            highlightedControl = nil
+            loadComments()
+        case .save:
+            toggleWatchLater()
         case .prevVideo: if vm.hasPrevious { vm.playPrevious() }
-        case .prevChapter: if vm.hasPreviousChapter { vm.skipToPreviousChapter() }
-        case .nextChapter: if vm.hasNextChapter { vm.skipToNextChapter() }
         case .nextVideo: if vm.hasNext { vm.playNext() }
+        }
+    }
+
+    func toggleChannelFollow() {
+        let currentVideo = vm.playerInfo?.video ?? video
+        guard let channelId = currentVideo.channelId, !channelId.isEmpty else { return }
+        let followed = isChannelFollowed
+        Task { @MainActor in
+            if followed {
+                await LocalSubscriptionStore.shared.unfollow(channelId: channelId)
+                isChannelFollowed = false
+            } else {
+                await LocalSubscriptionStore.shared.follow(
+                    LocalChannel(
+                        id: channelId,
+                        title: currentVideo.channelTitle,
+                        thumbnailURL: currentVideo.thumbnailURL
+                    )
+                )
+                isChannelFollowed = true
+            }
+        }
+    }
+
+    func toggleWatchLater() {
+        guard authService.isSignedIn else { return }
+        let currentVideo = vm.playerInfo?.video ?? video
+        let saved = isSavedToWatchLater
+        Task { @MainActor in
+            do {
+                if saved {
+                    if let token = WatchLaterMembershipStore.shared.setVideoId(for: currentVideo.id) {
+                        try await innerTubeAPI.removeFromWatchLater(setVideoId: token)
+                    }
+                    WatchLaterMembershipStore.shared.markRemoved(currentVideo.id)
+                    isSavedToWatchLater = false
+                } else {
+                    let token = try await innerTubeAPI.addToWatchLater(videoId: currentVideo.id)
+                    WatchLaterMembershipStore.shared.markSaved(currentVideo, setVideoId: token)
+                    isSavedToWatchLater = true
+                }
+            } catch {
+                vm.toastMessage = error.localizedDescription
+            }
         }
     }
 
 }
 
 extension PlayerControlsOverlay {
+
+    // MARK: - YouTube-style bottom chrome
+
+    /// Bottom-aligned player bar: description, subscribe, transport, and
+    /// like / dislike / comments / save / options. Software highlight only —
+    /// native focus stays on the player body (4K overlay Select fix).
+    var tvosBottomChrome: some View {
+        let currentVideo = vm.playerInfo?.video ?? video
+        let channelId = currentVideo.channelId ?? video.channelId
+        let description = currentVideo.description ?? video.description ?? ""
+        return VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 14) {
+                Text(currentVideo.title)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .accessibilityIdentifier("player.chromeTitle")
+
+                if !description.isEmpty {
+                    Text(description)
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.78))
+                        .lineLimit(2)
+                        .accessibilityIdentifier("player.descriptionLabel")
+                }
+
+                HStack(spacing: 20) {
+                    tvOverlayControl(
+                        highlighted: highlightedControl == .channel,
+                        scale: 1.12,
+                        shadowRadius: 10,
+                        identifier: "player.channelName",
+                        enabled: channelId?.isEmpty == false
+                    ) {
+                        Text(currentVideo.channelTitle)
+                            .font(.headline)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                    }
+                    tvOverlayControl(
+                        highlighted: highlightedControl == .subscribe,
+                        scale: 1.1,
+                        shadowRadius: 10,
+                        identifier: "player.subscribeButton",
+                        enabled: channelId?.isEmpty == false
+                    ) {
+                        Text(isChannelFollowed ? "Subscribed" : "Subscribe")
+                            .font(.headline.weight(.semibold))
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 10)
+                            .background(
+                                isChannelFollowed ? Color.white.opacity(0.22) : Color.red,
+                                in: Capsule()
+                            )
+                            .foregroundStyle(.white)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                if let chapter = vm.currentChapter {
+                    Text(chapter.title)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.9))
+                }
+
+                progressBar
+                    .accessibilityIdentifier("player.progressBar")
+
+                HStack(spacing: 20) {
+                    HStack(spacing: 36) {
+                        tvOverlayControl(
+                            highlighted: highlightedControl == .prevVideo,
+                            scale: 1.2,
+                            shadowRadius: 10,
+                            identifier: "player.prevBtn",
+                            enabled: vm.hasPrevious && !vm.isLoading,
+                            width: 56,
+                            height: 56
+                        ) {
+                            Image(systemName: AppSymbol.previousTrack)
+                                .font(.title2)
+                                .foregroundStyle(vm.hasPrevious && !vm.isLoading ? .white : .white.opacity(0.3))
+                        }
+                        seekButton(
+                            symbol: "gobackward.\(store.settings.seekBackSeconds)",
+                            seconds: -Double(store.settings.seekBackSeconds),
+                            tvHighlighted: false)
+                        playPauseButton
+                        seekButton(
+                            symbol: "goforward.\(store.settings.seekForwardSeconds)",
+                            seconds: Double(store.settings.seekForwardSeconds),
+                            tvHighlighted: false)
+                        tvOverlayControl(
+                            highlighted: highlightedControl == .nextVideo,
+                            scale: 1.2,
+                            shadowRadius: 10,
+                            identifier: "player.nextBtn",
+                            enabled: vm.hasNext,
+                            width: 56,
+                            height: 56
+                        ) {
+                            Image(systemName: AppSymbol.nextTrack)
+                                .font(.title2)
+                                .foregroundStyle(vm.hasNext ? .white : .white.opacity(0.3))
+                        }
+                    }
+                    Spacer(minLength: 16)
+                    HStack(spacing: 14) {
+                        tvActionGlyph(
+                            control: .like,
+                            identifier: "player.likeButton",
+                            systemName: vm.likeStatus == .like
+                                ? "\(AppSymbol.thumbsUp).fill" : AppSymbol.thumbsUp,
+                            accented: vm.likeStatus == .like
+                        )
+                        tvActionGlyph(
+                            control: .dislike,
+                            identifier: "player.dislikeButton",
+                            systemName: vm.likeStatus == .dislike
+                                ? "\(AppSymbol.thumbsDown).fill" : AppSymbol.thumbsDown,
+                            accented: vm.likeStatus == .dislike
+                        )
+                        tvActionGlyph(
+                            control: .comments,
+                            identifier: "player.commentsButton",
+                            systemName: "bubble.left.and.bubble.right"
+                        )
+                        tvActionGlyph(
+                            control: .save,
+                            identifier: "player.saveButton",
+                            systemName: isSavedToWatchLater
+                                ? "\(AppSymbol.watchLater).fill" : AppSymbol.watchLater,
+                            accented: isSavedToWatchLater
+                        )
+                        tvActionGlyph(
+                            control: .more,
+                            identifier: "player.moreButton",
+                            systemName: "ellipsis"
+                        )
+                    }
+                }
+                .disabled(vm.isLoading)
+                .opacity(vm.isLoading ? 0.35 : 1)
+            }
+            .padding(.horizontal, 48)
+            .padding(.bottom, 36)
+            .padding(.top, 20)
+            .background(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.55), .black.opacity(0.88)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+                .focusable(false)
+            )
+        }
+        .allowsHitTesting(false)
+        .focusable(false)
+    }
+
+    func tvActionGlyph(
+        control: PlayerView.TVPlayerControl,
+        identifier: String,
+        systemName: String,
+        accented: Bool = false
+    ) -> some View {
+        tvOverlayControl(
+            highlighted: highlightedControl == control,
+            scale: 1.28,
+            shadowRadius: 10,
+            identifier: identifier,
+            width: 64,
+            height: 64
+        ) {
+            Image(systemName: systemName)
+                .font(.title2)
+                .foregroundStyle(accented ? Color.accentColor : .white)
+        }
+    }
 
     // MARK: - tvOS progress bar
 

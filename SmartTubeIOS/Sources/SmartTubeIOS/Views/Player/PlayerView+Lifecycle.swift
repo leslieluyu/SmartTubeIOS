@@ -276,7 +276,11 @@ extension PlayerView {
                             // When controls are visible the scrub bar + bottom controls
                             // occupy ~130pt. Push captions above that area. When controls
                             // are hidden, a small margin from the safe-area bottom is enough.
+                            #if os(tvOS)
+                            .padding(.bottom, vm.controlsVisible ? 240 : 24)
+                            #else
                             .padding(.bottom, vm.controlsVisible ? 130 : 24)
+                            #endif
                             .animation(.easeInOut(duration: 0.2), value: vm.controlsVisible)
                     }
                     .ignoresSafeArea()
@@ -358,9 +362,22 @@ extension PlayerView {
                     )
                     guard !isTransitioning else { return }
                     if let current = highlightedControl {
-                        // Controls-nav mode: move the highlight between buttons.
-                        highlightedControl = tvNextControl(from: current, direction: direction)
-                        vm.showControls()
+                        // Transport left/right seek (YouTube Apple TV). Other directions
+                        // move the software highlight between bottom-bar buttons.
+                        if let move = TVOSMoveDirection(direction),
+                            TVOSPlayerControlPolicy.seeksInsteadOfMovingHighlight(
+                                control: current, direction: move)
+                        {
+                            switch move {
+                            case .left: vm.seekRelative(seconds: -Double(store.settings.seekBackSeconds))
+                            case .right: vm.seekRelative(seconds: Double(store.settings.seekForwardSeconds))
+                            default: break
+                            }
+                            vm.showControls()
+                        } else {
+                            highlightedControl = tvNextControl(from: current, direction: direction)
+                            vm.showControls()
+                        }
                     } else if vm.controlsVisible {
                         // Controls visible but nav not started yet.
                         // Left/right seeks directly (Siri Remote gen 1 edge-tap and D-pad seek UX);
@@ -601,6 +618,19 @@ extension PlayerView {
                 scheduleTVOSFocusReconcile()
             }
     }
+
+    private var tvosPlayerSessionModifiers: some View {
+        tvosPlayerFocusRestoreModifiers
+            .task(id: vm.playerInfo?.video.id ?? video.id) {
+                let current = vm.playerInfo?.video ?? video
+                if let channelId = current.channelId, !channelId.isEmpty {
+                    isChannelFollowed = await LocalSubscriptionStore.shared.isFollowing(channelId)
+                } else {
+                    isChannelFollowed = false
+                }
+                isSavedToWatchLater = WatchLaterMembershipStore.shared.contains(current.id)
+            }
+    }
     #endif
 
     var bodyWithLifecycleModifiers: some View {
@@ -609,7 +639,7 @@ extension PlayerView {
         // avoid conditional-compilation mid-chain (not allowed outside @ViewBuilder).
         Group {
             #if os(tvOS)
-            tvosPlayerFocusRestoreModifiers
+            tvosPlayerSessionModifiers
                 .toolbar(.hidden, for: .tabBar)
             #elseif os(iOS)
             playerContentView
@@ -945,7 +975,9 @@ extension PlayerView {
             showMoreMenu: $showMoreMenu,
             channelDestination: $channelDestination,
             vm: vm,
-            highlightedControl: $highlightedControl
+            highlightedControl: $highlightedControl,
+            isChannelFollowed: isChannelFollowed,
+            isSavedToWatchLater: isSavedToWatchLater
         )
         #else
         PlayerControlsOverlay(

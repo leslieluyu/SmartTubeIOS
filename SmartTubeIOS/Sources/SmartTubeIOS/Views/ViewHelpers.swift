@@ -129,6 +129,14 @@ enum AppSymbol {
     static let library = "square.stack.fill"
     static let channel = "person.crop.circle.fill"
     static let settings = "gearshape.fill"
+    static let subscriptions = "play.rectangle.on.rectangle.fill"
+    static let news = "newspaper.fill"
+    static let podcasts = "headphones"
+    static let gaming = "gamecontroller.fill"
+    static let live = "dot.radiowaves.left.and.right"
+    static let music = "music.note"
+    static let sports = "sportscourt.fill"
+    static let movies = "film.fill"
 
     // MARK: - Navigation / chevrons
     static let chevronLeft = "chevron.left"

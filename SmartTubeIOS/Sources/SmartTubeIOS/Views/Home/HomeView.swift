@@ -22,8 +22,9 @@ public struct HomeView: View {
     @Environment(PlayerRouter.self) private var playerRouter
     #endif
 
-    // "Home" is always first; its type is .home.
-    @State private var selectedSection: BrowseSection = BrowseSection.allSections[0]
+    // "Home" is always first; its type is .home. tvOS sidebar destinations can
+    // open this view already parked on Subscriptions / News / etc.
+    @State private var selectedSection: BrowseSection
     @State private var selectedVideo: Video?
     @State private var selectedPlaylist: Video?
     @State private var shortsPresentation: ShortsPresentation?
@@ -68,17 +69,21 @@ public struct HomeView: View {
         return all
     }
 
-    public init(api: InnerTubeAPI) {
+    public init(api: InnerTubeAPI, initialSection: BrowseSection = BrowseSection(type: .home)) {
         _homeVM = State(initialValue: HomeViewModel(api: api))
         _sectionVM = State(initialValue: BrowseViewModel(api: api))
+        _selectedSection = State(initialValue: initialSection)
     }
 
     // MARK: - Body
 
     public var body: some View {
         VStack(spacing: 0) {
+            #if os(tvOS)
+            // YouTube-style left rail replaces the chip bar on Apple TV.
+            EmptyView()
+            #else
             chipBar
-            #if !os(tvOS)
             Divider()
             #endif
             contentArea
@@ -109,6 +114,7 @@ public struct HomeView: View {
             .focusSection()
             #endif
         }
+        .accessibilityIdentifier("home.screen")
         #if os(iOS)
         // Player cover is centralised in MainTabView; deep-link handled there too.
         .toolbar(.hidden, for: .navigationBar)
@@ -345,7 +351,101 @@ public struct HomeView: View {
 
     // MARK: - Home shelves  (unified interleaved feed)
 
+    @ViewBuilder
     private var homeShelves: some View {
+        #if os(tvOS)
+        tvosHomeShelves
+        #else
+        iosHomeShelves
+        #endif
+    }
+
+    #if os(tvOS)
+    /// YouTube Apple TV home: large Recommended hero, then Recommended / Shorts /
+    /// Subscriptions shelves. Chip-bar categories live in the left rail instead.
+    private var tvosHomeShelves: some View {
+        Group {
+            if homeVM.isLoadingAny && homeVM.featuredHeroVideo == nil && homeVM.mergedVideos.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                let hideShorts = store.settings.hideShorts
+                let shortsVideos = hideShorts ? [] : homeVM.homeShortsVideos
+                let recommended = homeVM.recommendedShelfVideos
+                let subscriptions = homeVM.subscriptionRegularVideos
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 28) {
+                        if let hero = homeVM.featuredHeroVideo {
+                            TVOSHomeHeroView(video: hero, onSelect: { selectVideo($0, from: [hero]) })
+                        }
+                        if !recommended.isEmpty {
+                            tvosShelf(
+                                title: "Recommended",
+                                videos: recommended,
+                                cardWidth: 420,
+                                accessibilityID: "home.recommendedRow",
+                                loadMore: {
+                                    homeVM.loadMore(sectionId: BrowseSection.SectionType.home.rawValue)
+                                }
+                            )
+                        }
+                        if !shortsVideos.isEmpty {
+                            ShortsRowSection(
+                                videos: shortsVideos,
+                                onSelect: { selectVideo($0, from: shortsVideos) },
+                                accessibilityID: "home.shortsRow",
+                                loadMore: { homeVM.loadNextShortsPage() }
+                            )
+                            .focusSection()
+                        }
+                        if !subscriptions.isEmpty {
+                            tvosShelf(
+                                title: "Subscriptions",
+                                videos: subscriptions,
+                                cardWidth: 360,
+                                accessibilityID: "home.subscriptionsRow",
+                                loadMore: {
+                                    homeVM.loadMore(sectionId: BrowseSection.SectionType.subscriptions.rawValue)
+                                }
+                            )
+                        }
+                        let isLoadingMore = homeVM.sections.contains { $0.isLoadingMore }
+                        if isLoadingMore {
+                            ProgressView().frame(maxWidth: .infinity).padding()
+                        }
+                    }
+                    .padding(.bottom, 40)
+                }
+                .focusSection()
+            }
+        }
+    }
+
+    private func tvosShelf(
+        title: String,
+        videos: [Video],
+        cardWidth: CGFloat,
+        accessibilityID: String,
+        loadMore: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.title2.weight(.bold))
+                .padding(.horizontal, 24)
+            VideoRowSection(
+                videos: videos,
+                onSelect: { selectVideo($0, from: videos) },
+                cardWidth: cardWidth,
+                loadMore: loadMore,
+                accessibilityID: accessibilityID
+            )
+        }
+        .focusSection()
+    }
+    #endif
+
+    #if !os(tvOS)
+    private var iosHomeShelves: some View {
         Group {
             if homeVM.isLoadingAny && homeVM.mergedVideos.isEmpty {
                 ProgressView()
@@ -364,9 +464,6 @@ public struct HomeView: View {
                             accessibilityID: "home.shortsRow",
                             loadMore: { homeVM.loadNextShortsPage() }
                         )
-                        #if os(tvOS)
-                        .focusSection()
-                        #endif
                     }
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
@@ -385,13 +482,11 @@ public struct HomeView: View {
                     #if os(iOS)
                     .simultaneousGesture(sectionSwipe)
                     #endif
-                    #if os(tvOS)
-                    .focusSection()
-                    #endif
                 }
             }
         }
     }
+    #endif
 
     // MARK: - Section feed  (non-Home chips)
 

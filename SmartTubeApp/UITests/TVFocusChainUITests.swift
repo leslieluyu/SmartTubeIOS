@@ -29,9 +29,7 @@ final class TVFocusChainUITests: XCTestCase {
     // MARK: - Helpers
 
     private var chipBar: XCUIElement {
-        app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == 'home.chipBar'"))
-            .firstMatch
+        tvHomeSentinel(in: app)
     }
 
     private var titleLabel: XCUIElement {
@@ -51,46 +49,37 @@ final class TVFocusChainUITests: XCTestCase {
 
     // MARK: - Tests
 
-    /// Pressing ↓ once from the tab bar enters the chip bar.
-    /// Proven by: ↓ → → → select switches to the next chip's feed
-    /// (only possible if → navigated between chips, meaning focus was in the chip bar).
+    /// Pressing ← from Home content focuses the YouTube-style left rail.
+    /// Proven by: ← then ↓ then select on Subscriptions loads that feed.
     func testDownOneEntersChips() throws {
         XCTAssertTrue(
             chipBar.waitForExistence(timeout: 15),
-            "home.chipBar must appear — app failed to launch or content did not load"
+            "tv.sidebar / home.screen must appear — app failed to launch or content did not load"
         )
 
-        // Verify chip buttons are accessible before testing focus navigation.
-        let subscriptionsChip = app.buttons.matching(
-            NSPredicate(format: "identifier == 'chip.Subscriptions'")
-        ).firstMatch
+        let subscriptionsItem = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'tv.sidebar.subscriptions'"))
+            .firstMatch
         XCTAssertTrue(
-            subscriptionsChip.waitForExistence(timeout: 5),
-            "chip.Subscriptions must be in the accessibility tree"
+            subscriptionsItem.waitForExistence(timeout: 5),
+            "tv.sidebar.subscriptions must be in the accessibility tree"
         )
 
-        // Step 1: ↓ from tab bar → chip bar must receive focus
-        remote.press(.down)
-        Thread.sleep(forTimeInterval: 1.0)
-
-        // Step 2: → moves to the next chip (Subscriptions)
-        // If focus was NOT in the chip bar, → would move within video content instead.
-        remote.press(.right)
+        remote.press(.left)
         Thread.sleep(forTimeInterval: 0.8)
-
-        // Step 3: select activates the focused chip
+        remote.press(.down)
+        Thread.sleep(forTimeInterval: 0.6)
+        remote.press(.down)
+        Thread.sleep(forTimeInterval: 0.6)
         remote.press(.select)
         Thread.sleep(forTimeInterval: 1.0)
 
-        // A different chip is now selected — the section container loads immediately
-        // regardless of network state (loading spinner, empty state, or content).
         let sectionContainer = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier == 'home.sectionContainer'"))
             .firstMatch
         XCTAssertTrue(
             sectionContainer.waitForExistence(timeout: 10),
-            "home.sectionContainer must appear after ↓ + → + select — "
-                + "focus was not in the chip bar after one ↓ press"
+            "home.sectionContainer must appear after focusing Subscriptions in the left rail"
         )
     }
 
@@ -179,11 +168,12 @@ final class TVFocusChainUITests: XCTestCase {
         XCTAssertTrue(titleLabel.waitForExistence(timeout: 15), "Player must open")
         Thread.sleep(forTimeInterval: 1.0)
 
-        // First Up shows controls and highlights Play/Pause; second Up highlights More.
+        // Up shows controls (play/pause highlighted). Down moves to Like; Right ×4 lands on Options.
         remote.press(.up)
         Thread.sleep(forTimeInterval: 0.4)
-        remote.press(.up)
-        Thread.sleep(forTimeInterval: 0.4)
+        remote.press(.down)
+        Thread.sleep(forTimeInterval: 0.3)
+        for _ in 0..<4 { remote.press(.right); Thread.sleep(forTimeInterval: 0.2) }
         XCTAssertTrue(
             app.buttons["player.moreButton"].firstMatch.exists,
             "Ellipsis control must be present before activation")

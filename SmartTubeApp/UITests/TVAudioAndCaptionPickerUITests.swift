@@ -52,7 +52,7 @@ final class TVAudioAndCaptionPickerUITests: XCTestCase {
     }
 
     private var chipBar: XCUIElement {
-        element(identifier: "home.chipBar")
+        tvHomeSentinel(in: app)
     }
 
     /// Waits for at least one video card to appear on Home.

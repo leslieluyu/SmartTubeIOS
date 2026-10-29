@@ -39,9 +39,7 @@ final class TVPlayerControlsUITests: XCTestCase {
     // MARK: - Helpers
 
     private var chipBar: XCUIElement {
-        app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == 'home.chipBar'"))
-            .firstMatch
+        tvHomeSentinel(in: app)
     }
 
     private var titleLabel: XCUIElement {

@@ -129,6 +129,27 @@ public final class HomeViewModel {
     /// Used by `homeShelves` to populate the main grid (Shorts are shown separately).
     public var homeRegularVideos: [Video] { mergedVideos.filter { !$0.isShort } }
 
+    /// Recommended (home-section) regular videos, not mixed with subscriptions.
+    /// Used by the tvOS YouTube-style hero and Recommended shelf.
+    public var recommendedRegularVideos: [Video] {
+        sections.first { $0.section.type == .home }?.videos.filter { !$0.isShort } ?? []
+    }
+
+    /// Latest subscription uploads excluding Shorts, for the tvOS Subscriptions shelf.
+    public var subscriptionRegularVideos: [Video] {
+        sections.first { $0.section.type == .subscriptions }?.videos.filter { !$0.isShort } ?? []
+    }
+
+    /// Large feature video at the top of the tvOS home screen.
+    public var featuredHeroVideo: Video? { recommendedRegularVideos.first ?? homeRegularVideos.first }
+
+    /// Remaining recommended videos under the hero (YouTube TV "Recommended" row).
+    public var recommendedShelfVideos: [Video] {
+        let recs = recommendedRegularVideos
+        if recs.count > 1 { return Array(recs.dropFirst()) }
+        return Array(homeRegularVideos.dropFirst())
+    }
+
     /// Short videos for the dedicated Shorts row.
     /// Sources (in priority order, deduplicated by video ID):
     ///  1. `shortsVideos` — from the FEshorts browse (when the API works)

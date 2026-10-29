@@ -31,9 +31,7 @@ final class TVHomeFeedUITests: XCTestCase {
     // MARK: - Helpers
 
     private var chipBar: XCUIElement {
-        app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == 'home.chipBar'"))
-            .firstMatch
+        tvHomeSentinel(in: app)
     }
 
     private var sectionContainer: XCUIElement {
@@ -92,48 +90,45 @@ final class TVHomeFeedUITests: XCTestCase {
         XCTAssertFalse(errorBanner.exists, "player.errorBanner should not appear on the Home screen")
     }
 
-    /// Selecting the Subscriptions chip via D-pad should load the Subscriptions feed.
+    /// Selecting Subscriptions in the left rail should load the Subscriptions feed.
     func testSelectingSubscriptionsChipLoadsFeed() throws {
         guard chipBar.waitForExistence(timeout: 15) else {
-            try captureAndSkip("home.chipBar not found — cannot navigate to Subscriptions chip", in: app)
+            try captureAndSkip("tv.sidebar not found — cannot navigate to Subscriptions", in: app)
         }
-        // Press ↓ to move focus from the tab bar into the chip bar.
-        remote.press(.down)
-        Thread.sleep(forTimeInterval: 0.8)
-        // Navigate right to reach the Subscriptions chip (typically the second chip).
-        remote.press(.right)
-        Thread.sleep(forTimeInterval: 0.8)
-        // Activate the focused chip.
-        remote.press(.select)
-        Thread.sleep(forTimeInterval: 1.5)
-        // The section container should load the new feed.
-        guard sectionContainer.waitForExistence(timeout: 15) else {
-            try captureAndSkip("home.sectionContainer did not appear after selecting Subscriptions chip", in: app)
-        }
-        XCTAssertTrue(sectionContainer.exists, "home.sectionContainer must exist after chip selection")
-    }
-
-    /// Navigating back to the Home chip after Subscriptions should restore the chip bar.
-    func testSelectingHomeChipRestoresFeed() throws {
-        guard chipBar.waitForExistence(timeout: 15) else {
-            try captureAndSkip("home.chipBar not found on launch", in: app)
-        }
-        // Move to Subscriptions chip.
-        remote.press(.down)
-        Thread.sleep(forTimeInterval: 0.8)
-        remote.press(.right)
-        Thread.sleep(forTimeInterval: 0.8)
-        remote.press(.select)
-        Thread.sleep(forTimeInterval: 1.5)
-        // Navigate back left to the Home chip and select it.
         remote.press(.left)
         Thread.sleep(forTimeInterval: 0.8)
+        remote.press(.down)
+        Thread.sleep(forTimeInterval: 0.5)
+        remote.press(.down)
+        Thread.sleep(forTimeInterval: 0.5)
         remote.press(.select)
         Thread.sleep(forTimeInterval: 1.5)
-        // The chip bar must still be visible.
+        guard sectionContainer.waitForExistence(timeout: 15) else {
+            try captureAndSkip("home.sectionContainer did not appear after selecting Subscriptions", in: app)
+        }
+        XCTAssertTrue(sectionContainer.exists, "home.sectionContainer must exist after rail selection")
+    }
+
+    /// Navigating back to Home in the left rail should restore the home sentinel.
+    func testSelectingHomeChipRestoresFeed() throws {
+        guard chipBar.waitForExistence(timeout: 15) else {
+            try captureAndSkip("tv.sidebar not found on launch", in: app)
+        }
+        remote.press(.left)
+        Thread.sleep(forTimeInterval: 0.8)
+        remote.press(.down)
+        Thread.sleep(forTimeInterval: 0.5)
+        remote.press(.down)
+        Thread.sleep(forTimeInterval: 0.5)
+        remote.press(.select)
+        Thread.sleep(forTimeInterval: 1.5)
+        remote.press(.up)
+        Thread.sleep(forTimeInterval: 0.5)
+        remote.press(.select)
+        Thread.sleep(forTimeInterval: 1.5)
         XCTAssertTrue(
             chipBar.waitForExistence(timeout: 10),
-            "home.chipBar must still exist after returning to the Home chip"
+            "tv.sidebar / home.screen must still exist after returning to Home"
         )
     }
 }

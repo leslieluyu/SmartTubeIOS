@@ -349,28 +349,59 @@ struct MainTabView: View {
 }
 
 // MARK: - MainTVTabView  (tvOS)
-// Top-bar TabView is the Apple-recommended navigation pattern for Apple TV.
-// Each tab contains a NavigationStack so drill-down is available within each section.
+// YouTube-style left navigation rail + a NavigationStack for the selected
+// destination. The system TabView is not used so Search/Home/Library/categories
+// can share one rail (collapsed icons, expanded labels).
 
 #if os(tvOS)
 struct MainTVTabView: View {
     @State private var searchVM = SearchViewModel()
-    @State private var selectedTab: AppSection = .home
+    @State private var selectedDestination: TVOSSidebarDestination = .home
     @Environment(\.innerTubeAPI) private var api
+    @Namespace private var tvRootNamespace
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            ForEach(AppSection.allCases) { section in
-                NavigationStack { section.destination(api: api) }
-                    .tabItem {
-                        Label(section.rawValue, systemImage: section.icon)
-                    }
-                    .tag(section)
-            }
+        HStack(spacing: 0) {
+            TVOSSidebarView(selection: $selectedDestination)
+            NavigationStack { destinationView }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .focusSection()
+                .prefersDefaultFocus(true, in: tvRootNamespace)
         }
+        .focusScope(tvRootNamespace)
         .environment(searchVM)
         .onReceive(NotificationCenter.default.publisher(for: .activeChannelDidChange)) { _ in
-            selectedTab = .home
+            selectedDestination = .home
+        }
+    }
+
+    @ViewBuilder
+    private var destinationView: some View {
+        switch selectedDestination {
+        case .search:
+            SearchView()
+        case .home:
+            HomeView(api: api)
+        case .subscriptions:
+            HomeView(api: api, initialSection: BrowseSection(type: .subscriptions))
+        case .library:
+            LibraryView()
+        case .news:
+            HomeView(api: api, initialSection: BrowseSection(type: .news))
+        case .podcasts:
+            TVOSUnavailableDestinationView(title: "Podcasts")
+        case .gaming:
+            HomeView(api: api, initialSection: BrowseSection(type: .gaming))
+        case .live:
+            HomeView(api: api, initialSection: BrowseSection(type: .live))
+        case .music:
+            HomeView(api: api, initialSection: BrowseSection(type: .music))
+        case .sports:
+            HomeView(api: api, initialSection: BrowseSection(type: .sports))
+        case .movies:
+            TVOSUnavailableDestinationView(title: "Movies")
+        case .settings:
+            SettingsView()
         }
     }
 }

@@ -39,23 +39,19 @@ final class TVLibraryUITests: XCTestCase {
     }
 
     private var homeChipBar: XCUIElement {
-        app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == 'home.chipBar'"))
-            .firstMatch
+        tvHomeSentinel(in: app)
     }
 
-    /// Navigate to the Library tab.
-    /// Tab order: Home=1, Search=2, Library=3, Settings=4 (each right press advances one tab).
-    /// Right × 2 from the default focus position opens Library (Home is already selected on launch,
-    /// so right × 1 = Search, right × 2 = Library; this aligns with Settings needing right × 4
-    /// where the first press activates the tab bar focus scope before advancing).
+    /// Navigate to Library via the left rail: Search, Home, Subscriptions, Library.
     private func openLibrary() throws {
-        for _ in 0..<2 { remote.press(.right) }
+        remote.press(.left)
+        Thread.sleep(forTimeInterval: 0.6)
+        for _ in 0..<3 { remote.press(.down); Thread.sleep(forTimeInterval: 0.35) }
         remote.press(.select)
         Thread.sleep(forTimeInterval: 1.5)
         guard chipBar.waitForExistence(timeout: 12) else {
             try captureAndSkip(
-                "library.chipBar not found — Library tab did not open (check right-press count)", in: app)
+                "library.chipBar not found — Library rail item did not open", in: app)
         }
     }
 

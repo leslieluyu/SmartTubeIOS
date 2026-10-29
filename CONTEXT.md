@@ -50,6 +50,8 @@ Naming a new module after a concept not listed here requires adding the term in 
 - **High-res overlay** — tvOS-only progressive 1440p/2160p formats fetched from Android or
   WebCreator and merged into the TVAuth HLS quality picker. Played via AVPlayer composition;
   HLS 1080p remains the fallback. VP9/SABR/`rqh=1` rows are excluded.
+- **tvOS navigation rail** — the YouTube-style left sidebar on Apple TV (`TVOSSidebarView`);
+  collapsed icons expand into labeled destinations. Distinct from the macOS `MainSidebarView`.
 - **Audio track / Caption track** — a selectable dubbed-audio or subtitle track on a video.
 - **Deep link / Pending action** — a *deep link* is an external entry point (share extension,
   Siri, Safari extension, URL scheme) that names a video/channel to open; a *pending action* is
