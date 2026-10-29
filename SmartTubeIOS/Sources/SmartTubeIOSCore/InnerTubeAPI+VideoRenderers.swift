@@ -437,6 +437,42 @@ extension InnerTubeAPI {
         return false
     }
 
+    /// 4K / HDR / Dolby labels from TV tile overlays or metadata badges, when present.
+    private func tileQualityBadges(overlays: [[String: Any]]?, metadataBadges: [[String: Any]]?) -> [String] {
+        var labels: [String] = []
+        func consider(_ raw: String?) {
+            guard let raw, !raw.isEmpty else { return }
+            let upper = raw.uppercased()
+            let isQuality =
+                upper.contains("4K") || upper.contains("8K") || upper.contains("HDR")
+                || upper.contains("DOLBY") || upper.contains("2160")
+            guard isQuality else { return }
+            if !labels.contains(where: { $0.uppercased() == upper }) {
+                labels.append(raw)
+            }
+        }
+        if let metadataBadges {
+            for badge in metadataBadges {
+                consider((badge["metadataBadgeRenderer"] as? [String: Any])?["label"] as? String)
+            }
+        }
+        if let overlays {
+            for overlay in overlays {
+                if let time = overlay["thumbnailOverlayTimeStatusRenderer"] as? [String: Any] {
+                    consider((time["text"] as? [String: Any]).flatMap { extractText($0) })
+                }
+                if let badgeVM = overlay["thumbnailOverlayBadgeViewModel"] as? [String: Any],
+                    let thumbs = badgeVM["thumbnailBadges"] as? [[String: Any]]
+                {
+                    for thumb in thumbs {
+                        consider((thumb["thumbnailBadgeViewModel"] as? [String: Any])?["text"] as? String)
+                    }
+                }
+            }
+        }
+        return labels
+    }
+
     // MARK: – TVHTML5 tileRenderer parser (Android TileItem methodology)
     // Mirrors: TileItem.getVideoId(), getTitle(), getThumbnails(), getBadgeText(), getChannelId()
     private func parseTileRenderer(_ tile: [String: Any]) -> Video? {
@@ -731,7 +767,8 @@ extension InnerTubeAPI {
             isShort: isShort,
             watchProgress: watchProgress,
             setVideoId: setVideoId,
-            badges: []
+            badges: tileQualityBadges(
+                overlays: overlays, metadataBadges: tileMetadata?["badges"] as? [[String: Any]])
         )
     }
 

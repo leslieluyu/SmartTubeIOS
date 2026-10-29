@@ -309,20 +309,27 @@ struct VideoRowSection: View {
     let videos: [Video]
     let onSelect: (Video) -> Void
     var cardWidth: CGFloat? = nil
+    var cardSpacing: CGFloat? = nil
+    var horizontalPadding: CGFloat? = nil
+    var verticalPadding: CGFloat? = nil
+    var tvOSCardStyle: TVOSVideoCardStyle = .feed
     var loadMore: (() -> Void)? = nil
     var accessibilityID: String? = nil
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: videoGridRowSpacing) {
+            HStack(alignment: .top, spacing: cardSpacing ?? videoGridRowSpacing) {
                 ForEach(videos) { video in
                     #if os(tvOS)
-                    VideoCardView(video: video, compact: false, onSelect: { onSelect(video) })
-                        .frame(width: cardWidth ?? 360)
-                        .accessibilityIdentifier("video.card.\(video.id)")
-                        .onAppear {
-                            if video.id == videos.last?.id { loadMore?() }
-                        }
+                    VideoCardView(
+                        video: video, compact: false, tvOSCardStyle: tvOSCardStyle,
+                        onSelect: { onSelect(video) }
+                    )
+                    .frame(width: cardWidth ?? 360)
+                    .accessibilityIdentifier("video.card.\(video.id)")
+                    .onAppear {
+                        if video.id == videos.last?.id { loadMore?() }
+                    }
                     #else
                     VideoCardView(video: video, compact: false)
                         .frame(width: cardWidth ?? 220)
@@ -334,8 +341,8 @@ struct VideoRowSection: View {
                     #endif
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 4)
+            .padding(.horizontal, horizontalPadding ?? 16)
+            .padding(.vertical, verticalPadding ?? 4)
         }
         #if os(tvOS)
         .focusSection()

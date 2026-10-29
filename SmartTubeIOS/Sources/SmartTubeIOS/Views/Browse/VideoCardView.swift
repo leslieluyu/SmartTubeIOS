@@ -32,6 +32,8 @@ public struct VideoCardView: View {
     /// iOS call sites continue using their own tap handlers; this is only invoked
     /// from the `#else` (tvOS) modifier block below.
     public var onSelect: (() -> Void)? = nil
+    /// tvOS home carousel style. `feed` keeps Library/Search chrome.
+    public var tvOSCardStyle: TVOSVideoCardStyle = .feed
 
     @Environment(AuthService.self) private var authService
     @Environment(SettingsStore.self) private var store
@@ -65,10 +67,17 @@ public struct VideoCardView: View {
         currentPlaylistId ?? video.playlistId
     }
 
-    public init(video: Video, compact: Bool = false, currentPlaylistId: String? = nil, onSelect: (() -> Void)? = nil) {
+    public init(
+        video: Video,
+        compact: Bool = false,
+        currentPlaylistId: String? = nil,
+        tvOSCardStyle: TVOSVideoCardStyle = .feed,
+        onSelect: (() -> Void)? = nil
+    ) {
         self.video = video
         self.compact = compact
         self.currentPlaylistId = currentPlaylistId
+        self.tvOSCardStyle = tvOSCardStyle
         self.onSelect = onSelect
     }
 
@@ -374,8 +383,11 @@ public struct VideoCardView: View {
                 }
                 #endif
             }
-            .shadow(color: isFocused ? .white.opacity(0.9) : .clear, radius: 18, x: 0, y: 0)
-            .scaleEffect(isFocused ? 1.08 : 1.0)
+            .shadow(
+                color: (isFocused && tvOSCardStyle == .feed) ? .white.opacity(0.9) : .clear,
+                radius: 18, x: 0, y: 0
+            )
+            .scaleEffect(isFocused ? tvOSCardStyle.focusScale : 1.0)
             .zIndex(isFocused ? 1 : 0)
             .animation(.easeInOut(duration: 0.15), value: isFocused)
             .alert(item: $watchLaterAlert) { item in
@@ -421,7 +433,7 @@ public struct VideoCardView: View {
     // MARK: Grid layout (default)
 
     private var gridLayout: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: tvOSCardStyle == .feed ? 6 : 10) {
             Color.clear
                 .aspectRatio(16 / 9, contentMode: .fit)
                 .overlay(thumbnailView.clipped())
@@ -430,47 +442,29 @@ public struct VideoCardView: View {
                         watchProgressBar(progress)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: TVOSHomeShelfMetrics.thumbnailCornerRadius))
                 .overlay(alignment: .bottomTrailing) {
                     let dur = video.formattedDuration
                     if !dur.isEmpty { durationBadge(dur) }
                 }
                 .overlay(alignment: .bottomLeading) {
-                    if let label = uploadDateLabel { durationBadge(label) }
+                    if tvOSCardStyle == .feed, let label = uploadDateLabel { durationBadge(label) }
                 }
                 .overlay(alignment: .topLeading) {
                     if video.isLive { liveBadge }
                 }
                 .overlay(alignment: .topTrailing) {
-                    if WatchLaterMembershipStore.shared.contains(video.id) { watchLaterSavedBadge }
+                    topTrailingBadges
+                }
+                .overlay {
+                    youtubeFocusBorder
                 }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(displayTitle)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(2, reservesSpace: true)
-                    .accessibilityIdentifier("video.card.title")
-                Text(video.channelTitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .onTapGesture {
-                        guard let channelId = video.channelId, !channelId.isEmpty else { return }
-                        NotificationCenter.default.post(
-                            name: .openChannel,
-                            object: nil,
-                            userInfo: ["channelId": channelId, "channelTitle": video.channelTitle]
-                        )
-                    }
-                    .accessibilityIdentifier("video.card.channelName")
-                HStack(spacing: 4) {
-                    let vc = video.formattedViewCount
-                    if !vc.isEmpty { Text(vc) }
-                }
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            if tvOSCardStyle == .feed {
+                feedMetadata
+            } else {
+                youtubeTVMetadata
             }
-            .padding(.horizontal, 2)
         }
         // #153: without an explicit content shape, SwiftUI's default hit-test area for this
         // compound view can leave gaps (the VStack spacing, padding) untappable — invisible on
@@ -478,6 +472,103 @@ public struct VideoCardView: View {
         // pointer on macOS. The caller (VideoGridSection) attaches its whole-card tap gesture
         // externally, so it needs this view's own hit-test region to cover its full frame.
         .contentShape(Rectangle())
+    }
+
+    private var feedMetadata: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(displayTitle)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(2, reservesSpace: true)
+                .accessibilityIdentifier("video.card.title")
+            Text(video.channelTitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .onTapGesture {
+                    guard let channelId = video.channelId, !channelId.isEmpty else { return }
+                    NotificationCenter.default.post(
+                        name: .openChannel,
+                        object: nil,
+                        userInfo: ["channelId": channelId, "channelTitle": video.channelTitle]
+                    )
+                }
+                .accessibilityIdentifier("video.card.channelName")
+            HStack(spacing: 4) {
+                let vc = video.formattedViewCount
+                if !vc.isEmpty { Text(vc) }
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    /// YouTube Apple TV metadata: bold title, then channel · views · age in grey.
+    private var youtubeTVMetadata: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(displayTitle)
+                .font(.system(size: tvOSCardStyle.titleFontSize, weight: .bold))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .accessibilityIdentifier("video.card.title")
+            Text(youtubeTVMetaLine)
+                .font(.system(size: tvOSCardStyle.metaFontSize, weight: .regular))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .accessibilityIdentifier("video.card.channelName")
+        }
+        .padding(.horizontal, 2)
+    }
+
+    private var youtubeTVMetaLine: String {
+        var parts: [String] = []
+        if !video.channelTitle.isEmpty { parts.append(video.channelTitle) }
+        let views = video.formattedViewCount
+        if !views.isEmpty { parts.append(views) }
+        if video.isLive {
+            parts.append("LIVE")
+        } else if let age = uploadDateLabel {
+            parts.append(age)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var topTrailingBadges: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            if tvOSCardStyle != .feed, !video.qualityBadgeLabels.isEmpty {
+                HStack(spacing: 4) {
+                    ForEach(video.qualityBadgeLabels, id: \.self) { label in
+                        Text(label)
+                            .font(.system(size: 14, weight: .bold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(.white)
+                            .foregroundStyle(.black)
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                    }
+                }
+                .padding(8)
+            }
+            if WatchLaterMembershipStore.shared.contains(video.id) { watchLaterSavedBadge }
+        }
+    }
+
+    @ViewBuilder
+    private var youtubeFocusBorder: some View {
+        #if os(tvOS)
+        if tvOSCardStyle != .feed, isFocused {
+            RoundedRectangle(cornerRadius: TVOSHomeShelfMetrics.thumbnailCornerRadius)
+                .strokeBorder(Color.white, lineWidth: tvOSCardStyle.focusBorderWidth)
+                .overlay {
+                    RoundedRectangle(cornerRadius: TVOSHomeShelfMetrics.thumbnailCornerRadius)
+                        .strokeBorder(Color.red.opacity(0.95), lineWidth: 2)
+                        .padding(tvOSCardStyle.focusBorderWidth)
+                }
+        }
+        #else
+        EmptyView()
+        #endif
     }
 
     // MARK: Compact (list) layout

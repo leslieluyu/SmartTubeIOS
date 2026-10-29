@@ -5,10 +5,12 @@ import SwiftUI
 //
 // YouTube-style home tab.  A horizontal chip bar at the top lets the user
 // switch between every available section:
-//   • "Home"  chip  → multi-shelf overview (Subscriptions row,
-//                      Recommended row) driven by HomeViewModel.
+//   • "Home"  chip  → multi-shelf overview (Recommended carousel,
+//                      Shorts, Subscriptions) driven by HomeViewModel.
 //   • Any other chip → full-screen video feed for that section driven by a
 //                      dedicated BrowseViewModel instance.
+//   On tvOS the chip bar is replaced by the left rail; Home uses large
+//   Recommended cards (~2.5-across) and smaller shelves beneath.
 
 public struct HomeView: View {
     @State private var homeVM: HomeViewModel
@@ -361,8 +363,8 @@ public struct HomeView: View {
     }
 
     #if os(tvOS)
-    /// YouTube Apple TV home: large Recommended hero, then Recommended / Shorts /
-    /// Subscriptions shelves. Chip-bar categories live in the left rail instead.
+    /// YouTube Apple TV home: Recommended carousel (~2.5 large 16:9 cards), then
+    /// Shorts / Subscriptions (~3.5-across). Chip-bar categories live in the rail.
     private var tvosHomeShelves: some View {
         Group {
             if homeVM.isLoadingAny && homeVM.featuredHeroVideo == nil && homeVM.mergedVideos.isEmpty {
@@ -373,48 +375,58 @@ public struct HomeView: View {
                 let shortsVideos = hideShorts ? [] : homeVM.homeShortsVideos
                 let recommended = homeVM.recommendedShelfVideos
                 let subscriptions = homeVM.subscriptionRegularVideos
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 28) {
-                        if let hero = homeVM.featuredHeroVideo {
-                            TVOSHomeHeroView(video: hero, onSelect: { selectVideo($0, from: [hero]) })
+                GeometryReader { geo in
+                    let recommendedWidth = TVOSHomeShelfMetrics.cardWidth(
+                        containerWidth: geo.size.width,
+                        visibleCards: TVOSHomeShelfMetrics.recommendedVisibleCards
+                    )
+                    let shelfWidth = TVOSHomeShelfMetrics.cardWidth(
+                        containerWidth: geo.size.width,
+                        visibleCards: TVOSHomeShelfMetrics.standardVisibleCards
+                    )
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 32) {
+                            if !recommended.isEmpty {
+                                tvosShelf(
+                                    title: "Recommended",
+                                    videos: recommended,
+                                    cardWidth: recommendedWidth,
+                                    style: .recommended,
+                                    accessibilityID: "home.recommendedRow",
+                                    loadMore: {
+                                        homeVM.loadMore(sectionId: BrowseSection.SectionType.home.rawValue)
+                                    }
+                                )
+                            }
+                            if !shortsVideos.isEmpty {
+                                ShortsRowSection(
+                                    videos: shortsVideos,
+                                    onSelect: { selectVideo($0, from: shortsVideos) },
+                                    accessibilityID: "home.shortsRow",
+                                    loadMore: { homeVM.loadNextShortsPage() }
+                                )
+                                .focusSection()
+                            }
+                            if !subscriptions.isEmpty {
+                                tvosShelf(
+                                    title: "Subscriptions",
+                                    videos: subscriptions,
+                                    cardWidth: shelfWidth,
+                                    style: .shelf,
+                                    accessibilityID: "home.subscriptionsRow",
+                                    loadMore: {
+                                        homeVM.loadMore(
+                                            sectionId: BrowseSection.SectionType.subscriptions.rawValue)
+                                    }
+                                )
+                            }
+                            let isLoadingMore = homeVM.sections.contains { $0.isLoadingMore }
+                            if isLoadingMore {
+                                ProgressView().frame(maxWidth: .infinity).padding()
+                            }
                         }
-                        if !recommended.isEmpty {
-                            tvosShelf(
-                                title: "Recommended",
-                                videos: recommended,
-                                cardWidth: 420,
-                                accessibilityID: "home.recommendedRow",
-                                loadMore: {
-                                    homeVM.loadMore(sectionId: BrowseSection.SectionType.home.rawValue)
-                                }
-                            )
-                        }
-                        if !shortsVideos.isEmpty {
-                            ShortsRowSection(
-                                videos: shortsVideos,
-                                onSelect: { selectVideo($0, from: shortsVideos) },
-                                accessibilityID: "home.shortsRow",
-                                loadMore: { homeVM.loadNextShortsPage() }
-                            )
-                            .focusSection()
-                        }
-                        if !subscriptions.isEmpty {
-                            tvosShelf(
-                                title: "Subscriptions",
-                                videos: subscriptions,
-                                cardWidth: 360,
-                                accessibilityID: "home.subscriptionsRow",
-                                loadMore: {
-                                    homeVM.loadMore(sectionId: BrowseSection.SectionType.subscriptions.rawValue)
-                                }
-                            )
-                        }
-                        let isLoadingMore = homeVM.sections.contains { $0.isLoadingMore }
-                        if isLoadingMore {
-                            ProgressView().frame(maxWidth: .infinity).padding()
-                        }
+                        .padding(.bottom, 40)
                     }
-                    .padding(.bottom, 40)
                 }
                 .focusSection()
             }
@@ -425,17 +437,24 @@ public struct HomeView: View {
         title: String,
         videos: [Video],
         cardWidth: CGFloat,
+        style: TVOSVideoCardStyle,
         accessibilityID: String,
         loadMore: @escaping () -> Void
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.title2.weight(.bold))
-                .padding(.horizontal, 24)
+                .font(.system(size: TVOSHomeShelfMetrics.rowHeaderFontSize, weight: .semibold))
+                .padding(.horizontal, TVOSHomeShelfMetrics.rowHorizontalPadding)
             VideoRowSection(
                 videos: videos,
                 onSelect: { selectVideo($0, from: videos) },
                 cardWidth: cardWidth,
+                cardSpacing: TVOSHomeShelfMetrics.cardSpacing,
+                horizontalPadding: TVOSHomeShelfMetrics.rowHorizontalPadding,
+                verticalPadding: style == .recommended
+                    ? TVOSHomeShelfMetrics.recommendedRowVerticalPadding
+                    : TVOSHomeShelfMetrics.standardRowVerticalPadding,
+                tvOSCardStyle: style,
                 loadMore: loadMore,
                 accessibilityID: accessibilityID
             )

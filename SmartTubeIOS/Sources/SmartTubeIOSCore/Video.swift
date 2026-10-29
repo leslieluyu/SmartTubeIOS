@@ -140,6 +140,23 @@ public extension Video {
         }
     }
 
+    /// Thumbnail corner labels such as "4K" / "HDR" when InnerTube supplied them.
+    var qualityBadgeLabels: [String] {
+        let interesting = ["4K", "8K", "HDR", "DOLBY", "2160"]
+        var seen = Set<String>()
+        var result: [String] = []
+        for badge in badges {
+            let trimmed = badge.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            let upper = trimmed.uppercased()
+            guard interesting.contains(where: { upper.contains($0) }) else { continue }
+            if seen.insert(upper).inserted {
+                result.append(trimmed)
+            }
+        }
+        return result
+    }
+
     /// High-quality thumbnail URL using YouTube's image CDN (480×360, always available).
     var highQualityThumbnailURL: URL? {
         URL(string: "https://i.ytimg.com/vi/\(id)/hqdefault.jpg")

@@ -130,7 +130,7 @@ public final class HomeViewModel {
     public var homeRegularVideos: [Video] { mergedVideos.filter { !$0.isShort } }
 
     /// Recommended (home-section) regular videos, not mixed with subscriptions.
-    /// Used by the tvOS YouTube-style hero and Recommended shelf.
+    /// Used by the tvOS YouTube-style Recommended carousel.
     public var recommendedRegularVideos: [Video] {
         sections.first { $0.section.type == .home }?.videos.filter { !$0.isShort } ?? []
     }
@@ -140,14 +140,14 @@ public final class HomeViewModel {
         sections.first { $0.section.type == .subscriptions }?.videos.filter { !$0.isShort } ?? []
     }
 
-    /// Large feature video at the top of the tvOS home screen.
+    /// First recommended video — used as the empty-state loading sentinel.
     public var featuredHeroVideo: Video? { recommendedRegularVideos.first ?? homeRegularVideos.first }
 
-    /// Remaining recommended videos under the hero (YouTube TV "Recommended" row).
+    /// YouTube TV Recommended carousel: every regular recommended video, first included.
     public var recommendedShelfVideos: [Video] {
         let recs = recommendedRegularVideos
-        if recs.count > 1 { return Array(recs.dropFirst()) }
-        return Array(homeRegularVideos.dropFirst())
+        if !recs.isEmpty { return recs }
+        return homeRegularVideos
     }
 
     /// Short videos for the dedicated Shorts row.
