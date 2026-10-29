@@ -84,3 +84,40 @@ enum TVOSSidebarDestination: String, CaseIterable, Identifiable, Hashable {
         allCases.filter { $0 != .settings }
     }
 }
+
+/// Compact rail geometry so every destination stays readable without overlapping
+/// on Apple TV 1080p (1920×1080). Semantic SwiftUI fonts are much larger on
+/// tvOS (`.title2` ≈ 57pt) and were colliding in the icon stack.
+enum TVOSSidebarMetrics {
+    static let collapsedWidth: CGFloat = 56
+    static let expandedWidth: CGFloat = 228
+    static let iconSize: CGFloat = 18
+    static let labelFontSize: CGFloat = 20
+    static let rowContentHeight: CGFloat = 24
+    static let rowVerticalPadding: CGFloat = 3
+    static let rowHorizontalPadding: CGFloat = 6
+    static let iconLabelSpacing: CGFloat = 10
+    static let minRowSpacing: CGFloat = 8
+    static let railVerticalPadding: CGFloat = 10
+    static let railHorizontalPaddingCollapsed: CGFloat = 6
+    static let railHorizontalPaddingExpanded: CGFloat = 10
+    static let cornerRadius: CGFloat = 8
+    static let appleTV1080Height: CGFloat = 1080
+    /// Overscan / safe-area budget on the 1080p Apple TV simulator.
+    static let appleTV1080VerticalSafeBudget: CGFloat = 80
+
+    static var rowHeight: CGFloat {
+        rowContentHeight + rowVerticalPadding * 2
+    }
+
+    /// Minimum height of the full destination list (no extra flexible space).
+    static var packedHeight: CGFloat {
+        let count = CGFloat(TVOSSidebarDestination.allCases.count)
+        let gaps = max(0, count - 1)
+        return count * rowHeight + gaps * minRowSpacing + railVerticalPadding * 2
+    }
+
+    static var fitsAppleTV1080: Bool {
+        packedHeight <= appleTV1080Height - appleTV1080VerticalSafeBudget
+    }
+}

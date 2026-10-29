@@ -52,4 +52,17 @@ struct TVOSSidebarDestinationTests {
         #expect(!TVOSSidebarDestination.primaryItems.contains(.settings))
         #expect(TVOSSidebarDestination.primaryItems.last == .movies)
     }
+
+    @Test("packed rail fits Apple TV 1080p without overlapping rows")
+    func packedHeightFits1080p() {
+        #expect(TVOSSidebarMetrics.rowHeight < 40)
+        #expect(TVOSSidebarMetrics.iconSize <= TVOSSidebarMetrics.rowContentHeight)
+        #expect(TVOSSidebarMetrics.labelFontSize <= 22)
+        #expect(TVOSSidebarMetrics.minRowSpacing >= 6)
+        #expect(TVOSSidebarMetrics.fitsAppleTV1080)
+        #expect(
+            TVOSSidebarMetrics.packedHeight
+                <= TVOSSidebarMetrics.appleTV1080Height
+                - TVOSSidebarMetrics.appleTV1080VerticalSafeBudget)
+    }
 }
