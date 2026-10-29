@@ -8,8 +8,7 @@ import Foundation
 enum TVOSPlayerControl: Equatable, Hashable {
     case channel, subscribe
     case scrubber
-    case playPause
-    case prevVideo, nextVideo
+    case prevVideo, seekBack, playPause, seekForward, nextVideo
     case like, dislike, comments, save, more
 }
 
@@ -37,9 +36,10 @@ enum TVOSPlayerMoveOutcome: Equatable {
 enum TVOSPlayerControlPolicy {
 
     /// Bottom-row icons walked by Left/Right while chrome is visible.
-    /// Seek-back/forward glyphs stay visual affordances only.
+    /// Visual order matches `tvosBottomChrome`: prev · −N s · play · +N s · next · actions.
     static let bottomIcons: [TVOSPlayerControl] = [
-        .prevVideo, .playPause, .nextVideo, .like, .dislike, .comments, .save, .more,
+        .prevVideo, .seekBack, .playPause, .seekForward, .nextVideo,
+        .like, .dislike, .comments, .save, .more,
     ]
 
     /// Software focus when Select or Down reveals the bar.
@@ -54,8 +54,8 @@ enum TVOSPlayerControlPolicy {
     }
 
     /// Left/Right seek only while chrome is hidden, or while the scrubber is
-    /// the highlighted control (timeline nudge). Play/Pause never seeks when
-    /// the bar is up.
+    /// the highlighted control (timeline nudge). Play/Pause and the ± seek
+    /// icons never seek from D-pad Left/Right when the bar is up — Select does.
     static func seeksInsteadOfMovingHighlight(
         chromeVisible: Bool,
         control: TVOSPlayerControl?,

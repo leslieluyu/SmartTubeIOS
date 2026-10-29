@@ -31,11 +31,42 @@ Seek is gated on chrome-hidden. Play/Pause is not a seek target while the bar is
 |---|---|
 | Focus default | **Play/Pause** |
 | **Up** | Highlight the scrubber / progress bar |
-| **Left / Right** on bottom icons | Move among **prev · play/pause · next · like · dislike · comments · save · options**. No seek. |
+| **Left / Right** on bottom icons | Move among **prev · −N s · play/pause · +N s · next · like · dislike · comments · save · options**. No seek. |
 | **Left / Right** on the scrubber | Timeline nudge (the one chrome-visible seek exception) |
 | **Down** from the scrubber | Return to **Play/Pause** |
 | **Up** from the scrubber | Channel / Subscribe (info row) |
-| **Select** on a highlighted icon | Activate that control (Play/Pause toggles playback) |
+| **Select** on a highlighted icon | Activate that control (Play/Pause toggles playback; ± seek icons seek) |
+
+### Bottom-chrome software-focus ring
+
+Native focus stays on the player body. The software highlight (`highlightedControl`) is the
+only focus ring. Every control rendered on the bottom chrome:
+
+| Control | Rendered | In L/R ring | Software highlight | Select |
+|---|---|---|---|---|
+| Title / description | yes | no (labels) | no | n/a |
+| Channel name | yes (info row) | channel ↔ subscribe | yes | open channel |
+| Subscribe | yes (info row) | channel ↔ subscribe | yes | follow / unfollow |
+| Current chapter | yes, if chapters | no (label) | no | n/a |
+| Scrubber / progress | yes | Up from any bottom icon | yes | toggle play/pause |
+| Previous video | yes | yes | yes | previous in queue |
+| **Rewind −N s** | yes | **yes** (left of Play) | **yes** | relative seek back |
+| Play / Pause | yes | yes (default) | yes | toggle play/pause |
+| **Forward +N s** | yes | **yes** (right of Play) | **yes** | relative seek forward |
+| Next video | yes | yes | yes | next in queue |
+| Like | yes | yes | yes | like |
+| Dislike | yes | yes | yes | dislike |
+| Comments | yes | yes | yes | comments sheet |
+| Save (Watch Later) | yes | yes | yes | toggle Watch Later |
+| Options (⋯) | yes | yes | yes | right settings drawer |
+
+There is no separate Settings gear or CC glyph on this strip; captions, quality, speed,
+audio, and sleep live in the Options drawer. Captions/CC are not missing from the ring —
+they are not drawn on the bar.
+
+Rewind / forward used to be drawn with `tvHighlighted: false` and omitted from
+`TVOSPlayerControlPolicy.bottomIcons` (visual affordances only). They are first-class
+neighbors of Play/Pause.
 
 ## Approximated
 

@@ -9,10 +9,23 @@ struct TVOSPlayerControlPolicyTests {
     @Test("play/pause is the transport control")
     func playPauseIsTransport() {
         #expect(TVOSPlayerControlPolicy.isTransport(.playPause))
+        #expect(!TVOSPlayerControlPolicy.isTransport(.seekBack))
+        #expect(!TVOSPlayerControlPolicy.isTransport(.seekForward))
         #expect(!TVOSPlayerControlPolicy.isTransport(.scrubber))
         #expect(!TVOSPlayerControlPolicy.isTransport(.like))
         #expect(TVOSPlayerControlPolicy.isBottomIcon(.playPause))
+        #expect(TVOSPlayerControlPolicy.isBottomIcon(.seekBack))
+        #expect(TVOSPlayerControlPolicy.isBottomIcon(.seekForward))
         #expect(!TVOSPlayerControlPolicy.isBottomIcon(.scrubber))
+    }
+
+    @Test("bottom icon ring is prev · −N s · play · +N s · next · actions")
+    func bottomIconRingOrder() {
+        #expect(
+            TVOSPlayerControlPolicy.bottomIcons == [
+                .prevVideo, .seekBack, .playPause, .seekForward, .nextVideo,
+                .like, .dislike, .comments, .save, .more,
+            ])
     }
 
     @Test("chrome hidden: left/right seek regardless of highlight")
@@ -44,7 +57,33 @@ struct TVOSPlayerControlPolicyTests {
                 chromeVisible: true, control: .like, direction: .left))
         #expect(
             !TVOSPlayerControlPolicy.seeksInsteadOfMovingHighlight(
+                chromeVisible: true, control: .seekBack, direction: .left))
+        #expect(
+            !TVOSPlayerControlPolicy.seeksInsteadOfMovingHighlight(
+                chromeVisible: true, control: .seekForward, direction: .right))
+        #expect(
+            !TVOSPlayerControlPolicy.seeksInsteadOfMovingHighlight(
                 chromeVisible: true, control: nil, direction: .right))
+    }
+
+    @Test("chrome visible: highlighted ± seek icons move, they do not D-pad seek")
+    func visibleChromeSeekButtonsMoveNotSeek() {
+        #expect(
+            TVOSPlayerControlPolicy.outcome(
+                chromeVisible: true, highlighted: .seekBack, direction: .left)
+                == .highlight(.prevVideo))
+        #expect(
+            TVOSPlayerControlPolicy.outcome(
+                chromeVisible: true, highlighted: .seekBack, direction: .right)
+                == .highlight(.playPause))
+        #expect(
+            TVOSPlayerControlPolicy.outcome(
+                chromeVisible: true, highlighted: .seekForward, direction: .left)
+                == .highlight(.playPause))
+        #expect(
+            TVOSPlayerControlPolicy.outcome(
+                chromeVisible: true, highlighted: .seekForward, direction: .right)
+                == .highlight(.nextVideo))
     }
 
     @Test("chrome visible: highlighted scrubber left/right still seek")
@@ -84,11 +123,13 @@ struct TVOSPlayerControlPolicyTests {
         #expect(
             TVOSPlayerControlPolicy.outcome(
                 chromeVisible: true, highlighted: .playPause, direction: .left)
-                == .highlight(.prevVideo))
+                == .highlight(.seekBack))
         #expect(
             TVOSPlayerControlPolicy.outcome(
                 chromeVisible: true, highlighted: .playPause, direction: .right)
-                == .highlight(.nextVideo))
+                == .highlight(.seekForward))
+        #expect(TVOSPlayerControlPolicy.next(from: .seekBack, direction: .left) == .prevVideo)
+        #expect(TVOSPlayerControlPolicy.next(from: .seekForward, direction: .right) == .nextVideo)
         #expect(TVOSPlayerControlPolicy.next(from: .nextVideo, direction: .right) == .like)
         #expect(TVOSPlayerControlPolicy.next(from: .like, direction: .right) == .dislike)
         #expect(TVOSPlayerControlPolicy.next(from: .dislike, direction: .right) == .comments)
@@ -101,6 +142,8 @@ struct TVOSPlayerControlPolicyTests {
     @Test("chrome visible: up from play/pause highlights the scrubber")
     func visibleChromeUpHighlightsScrubber() {
         #expect(TVOSPlayerControlPolicy.next(from: .playPause, direction: .up) == .scrubber)
+        #expect(TVOSPlayerControlPolicy.next(from: .seekBack, direction: .up) == .scrubber)
+        #expect(TVOSPlayerControlPolicy.next(from: .seekForward, direction: .up) == .scrubber)
         #expect(TVOSPlayerControlPolicy.next(from: .like, direction: .up) == .scrubber)
         #expect(TVOSPlayerControlPolicy.next(from: .more, direction: .up) == .scrubber)
         #expect(TVOSPlayerControlPolicy.next(from: .scrubber, direction: .down) == .playPause)
@@ -115,11 +158,11 @@ struct TVOSPlayerControlPolicyTests {
         #expect(
             TVOSPlayerControlPolicy.outcome(
                 chromeVisible: true, highlighted: nil, direction: .right)
-                == .highlight(.nextVideo))
+                == .highlight(.seekForward))
         #expect(
             TVOSPlayerControlPolicy.outcome(
                 chromeVisible: true, highlighted: nil, direction: .left)
-                == .highlight(.prevVideo))
+                == .highlight(.seekBack))
         #expect(
             TVOSPlayerControlPolicy.outcome(
                 chromeVisible: true, highlighted: nil, direction: .up)
