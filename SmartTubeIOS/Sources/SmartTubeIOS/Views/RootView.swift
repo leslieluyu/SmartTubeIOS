@@ -351,25 +351,41 @@ struct MainTabView: View {
 // MARK: - MainTVTabView  (tvOS)
 // YouTube-style left navigation rail + a NavigationStack for the selected
 // destination. The system TabView is not used so Search/Home/Library/categories
-// can share one rail (collapsed icons, expanded labels).
+// can share one rail (collapsed icons, expanded labels). During playback the
+// rail is collapsed to zero width so the player is fullscreen; Back restores it.
 
 #if os(tvOS)
 struct MainTVTabView: View {
     @State private var searchVM = SearchViewModel()
     @State private var selectedDestination: TVOSSidebarDestination = .home
+    @State private var playbackPresentation = TVOSPlaybackPresentation()
     @Environment(\.innerTubeAPI) private var api
     @Namespace private var tvRootNamespace
 
     var body: some View {
         HStack(spacing: 0) {
             TVOSSidebarView(selection: $selectedDestination)
+                .frame(
+                    minWidth: 0,
+                    maxWidth: playbackPresentation.isFullscreen ? 0 : TVOSSidebarMetrics.expandedWidth,
+                    alignment: .leading
+                )
+                .clipped()
+                .opacity(playbackPresentation.isFullscreen ? 0 : 1)
+                .allowsHitTesting(!playbackPresentation.isFullscreen)
+                .accessibilityHidden(playbackPresentation.isFullscreen)
+                .disabled(playbackPresentation.isFullscreen)
             NavigationStack { destinationView }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .focusSection()
-                .prefersDefaultFocus(true, in: tvRootNamespace)
+                .prefersDefaultFocus(!playbackPresentation.isFullscreen, in: tvRootNamespace)
         }
         .focusScope(tvRootNamespace)
         .environment(searchVM)
+        .environment(playbackPresentation)
+        .transaction(value: playbackPresentation.isFullscreen) { transaction in
+            transaction.animation = nil
+        }
         .onReceive(NotificationCenter.default.publisher(for: .activeChannelDidChange)) { _ in
             selectedDestination = .home
         }
@@ -430,7 +446,7 @@ struct MainSidebarView: View {
                     Label(section.rawValue, systemImage: section.icon)
                         .tag(section)
                 }
-                .navigationTitle("SmartTube")
+                .navigationTitle("iTube")
                 if auth.isSignedIn {
                     Divider()
                     HStack {

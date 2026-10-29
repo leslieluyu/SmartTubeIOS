@@ -490,12 +490,12 @@ extension PlayerControlsOverlay {
         #if os(tvOS)
         tvOverlayControl(
             highlighted: highlightedControl == .playPause,
-            scale: 1.6,
+            scale: TVOSPlayerChromeMetrics.playPauseHighlightScale,
             shadowOpacity: 0.65,
-            shadowRadius: 8,
+            shadowRadius: 6,
             identifier: "player.playPauseButton",
-            width: 88,
-            height: 88
+            width: TVOSPlayerChromeMetrics.playPauseSize,
+            height: TVOSPlayerChromeMetrics.playPauseSize
         ) {
             playPauseIcon
         }
@@ -512,10 +512,26 @@ extension PlayerControlsOverlay {
         #endif
     }
 
+    var playPauseIconPointSize: CGFloat {
+        #if os(tvOS)
+        TVOSPlayerChromeMetrics.playPauseIconSize
+        #else
+        42 * controlScale
+        #endif
+    }
+
+    var seekIconPointSize: CGFloat {
+        #if os(tvOS)
+        TVOSPlayerChromeMetrics.seekIconSize
+        #else
+        28 * controlScale
+        #endif
+    }
+
     var playPauseIcon: some View {
         Image(systemName: vm.videoEnded ? "arrow.counterclockwise" : (vm.isPlaying ? "pause.fill" : "play.fill"))
             .renderingMode(.original)
-            .font(.system(size: 42 * controlScale))
+            .font(.system(size: playPauseIconPointSize))
             .foregroundStyle(.white)
     }
 
@@ -526,12 +542,12 @@ extension PlayerControlsOverlay {
         #if os(tvOS)
         tvOverlayControl(
             highlighted: tvHighlighted,
-            scale: 1.55,
+            scale: TVOSPlayerChromeMetrics.seekHighlightScale,
             shadowOpacity: 0.6,
-            shadowRadius: 7,
+            shadowRadius: 6,
             identifier: seconds < 0 ? "player.seekBackButton" : "player.seekForwardButton",
-            width: 72,
-            height: 72
+            width: TVOSPlayerChromeMetrics.seekSize,
+            height: TVOSPlayerChromeMetrics.seekSize
         ) {
             seekIcon(symbol: symbol)
         }
@@ -551,7 +567,7 @@ extension PlayerControlsOverlay {
     func seekIcon(symbol: String) -> some View {
         Image(systemName: symbol)
             .renderingMode(.original)
-            .font(.system(size: 28 * controlScale))
+            .font(.system(size: seekIconPointSize))
             .foregroundStyle(.white)
     }
 

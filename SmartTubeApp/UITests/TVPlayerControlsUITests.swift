@@ -128,12 +128,12 @@ final class TVPlayerControlsUITests: XCTestCase {
 
         XCTAssertGreaterThanOrEqual(
             playPause.frame.midX - seekBack.frame.midX,
-            110,
+            60,
             "Rewind and play/pause are too close when highlighted"
         )
         XCTAssertGreaterThanOrEqual(
             seekForward.frame.midX - playPause.frame.midX,
-            110,
+            60,
             "Play/pause and fast-forward are too close when highlighted"
         )
     }
@@ -310,6 +310,50 @@ final class TVPlayerControlsUITests: XCTestCase {
         XCTAssertTrue(
             titleLabel.waitForExistence(timeout: 5),
             "#150 regression: player.titleLabel must still exist after pressing Menu to close description panel")
+    }
+
+    /// Options / Settings must be a right-side panel, not a full-width bottom strip.
+    func testMoreMenuIsRightSidePanel() throws {
+        try waitForMoreMenu()
+        let panel = element(identifier: "player.settingsPanel")
+        guard panel.waitForExistence(timeout: 8) else {
+            try captureAndSkip("player.settingsPanel not found — more menu did not open as a settings panel", in: app)
+        }
+        let appFrame = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(
+            panel.frame.midX,
+            appFrame.midX,
+            "Settings / options must sit on the right half of the player")
+        XCTAssertLessThan(
+            panel.frame.width,
+            appFrame.width * 0.45,
+            "Settings / options must not be a full-width bottom strip")
+    }
+
+    /// The left navigation rail must not remain in the hierarchy during playback.
+    func testSidebarHiddenDuringPlayback() throws {
+        try waitForMoreMenu()
+        remote.press(.menu)
+        Thread.sleep(forTimeInterval: 0.8)
+        let sidebar = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'tv.sidebar'"))
+            .firstMatch
+        if sidebar.exists {
+            XCTAssertFalse(
+                sidebar.isHittable,
+                "tv.sidebar must not be hittable while the player is fullscreen")
+            XCTAssertLessThan(
+                sidebar.frame.width,
+                1,
+                "tv.sidebar must collapse to zero width during playback")
+        }
+        XCTAssertTrue(titleLabel.exists, "player must still be open after closing the more menu")
+        remote.press(.menu)
+        Thread.sleep(forTimeInterval: 1.0)
+        XCTAssertTrue(
+            sidebar.waitForExistence(timeout: 6),
+            "tv.sidebar must return after Back leaves the player")
+        XCTAssertTrue(sidebar.isHittable, "tv.sidebar must be usable again after leaving the player")
     }
 }
 #endif

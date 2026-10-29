@@ -74,6 +74,7 @@ public struct PlayerView: View {
     @State var qualityToastMessage: String?
     #if os(tvOS)
     @Environment(\.innerTubeAPI) var innerTubeAPI
+    @Environment(TVOSPlaybackPresentation.self) var playbackPresentation
     /// Local-follow state for the in-player Subscribe control.
     @State var isChannelFollowed = false
     /// Watch Later membership for the in-player Save control.

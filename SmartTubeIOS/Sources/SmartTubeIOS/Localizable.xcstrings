@@ -2039,80 +2039,80 @@
         }
       }
     },
-    "Activate SmartTube" : {
+    "Activate iTube" : {
       "comment" : "Sign-in activation screen heading (iOS)",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تفعيل SmartTube"
+            "value" : "تفعيل iTube"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube aktivieren"
+            "value" : "iTube aktivieren"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Activar SmartTube"
+            "value" : "Activar iTube"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Activer SmartTube"
+            "value" : "Activer iTube"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube सक्रिय करें"
+            "value" : "iTube सक्रिय करें"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktivirajte SmartTube"
+            "value" : "Aktivirajte iTube"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktifkan SmartTube"
+            "value" : "Aktifkan iTube"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Attiva SmartTube"
+            "value" : "Attiva iTube"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTubeを有効化"
+            "value" : "iTubeを有効化"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube 활성화"
+            "value" : "iTube 활성화"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ativar SmartTube"
+            "value" : "Ativar iTube"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Активировать SmartTube"
+            "value" : "Активировать iTube"
           }
         },
         "sr" : {
@@ -2124,13 +2124,13 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube'yu Etkinleştir"
+            "value" : "iTube'yu Etkinleştir"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "激活 SmartTube"
+            "value" : "激活 iTube"
           }
         }
       }
@@ -21164,80 +21164,80 @@
         }
       }
     },
-    "Sign in to SmartTube" : {
+    "Sign in to iTube" : {
       "comment" : "tvOS activation screen heading",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تسجيل الدخول إلى SmartTube"
+            "value" : "تسجيل الدخول إلى iTube"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bei SmartTube anmelden"
+            "value" : "Bei iTube anmelden"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Iniciar sesión en SmartTube"
+            "value" : "Iniciar sesión en iTube"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se connecter à SmartTube"
+            "value" : "Se connecter à iTube"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube में साइन इन करें"
+            "value" : "iTube में साइन इन करें"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Prijavite se na SmartTube"
+            "value" : "Prijavite se na iTube"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Masuk ke SmartTube"
+            "value" : "Masuk ke iTube"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Accedi a SmartTube"
+            "value" : "Accedi a iTube"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTubeにサインイン"
+            "value" : "iTubeにサインイン"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube에 로그인"
+            "value" : "iTube에 로그인"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Entrar no SmartTube"
+            "value" : "Entrar no iTube"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Вход в SmartTube"
+            "value" : "Вход в iTube"
           }
         },
         "sr" : {
@@ -21249,13 +21249,13 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube'ya Oturum Aç"
+            "value" : "iTube'ya Oturum Aç"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "登录 SmartTube"
+            "value" : "登录 iTube"
           }
         }
       }
@@ -21932,80 +21932,80 @@
         }
       }
     },
-    "SmartTube" : {
+    "iTube" : {
       "comment" : "App name shown in macOS sidebar navigation title — do not translate",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "sr" : {
@@ -22017,91 +22017,91 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube"
+            "value" : "iTube"
           }
         }
       }
     },
-    "SmartTube on GitHub" : {
+    "iTube on GitHub" : {
       "comment" : "tvOS GitHub QR sheet title",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube على GitHub"
+            "value" : "iTube على GitHub"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube auf GitHub"
+            "value" : "iTube auf GitHub"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube en GitHub"
+            "value" : "iTube en GitHub"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube sur GitHub"
+            "value" : "iTube sur GitHub"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GitHub पर SmartTube"
+            "value" : "GitHub पर iTube"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube na GitHubu"
+            "value" : "iTube na GitHubu"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube di GitHub"
+            "value" : "iTube di GitHub"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube su GitHub"
+            "value" : "iTube su GitHub"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GitHubのSmartTube"
+            "value" : "GitHubのiTube"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GitHub의 SmartTube"
+            "value" : "GitHub의 iTube"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube no GitHub"
+            "value" : "iTube no GitHub"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube на GitHub"
+            "value" : "iTube на GitHub"
           }
         },
         "sr" : {
@@ -22113,13 +22113,13 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GitHub'da SmartTube"
+            "value" : "GitHub'da iTube"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube on GitHub"
+            "value" : "iTube on GitHub"
           }
         }
       }
@@ -23078,80 +23078,80 @@
         }
       }
     },
-    "Support SmartTube on Ko-fi" : {
+    "Support iTube on Ko-fi" : {
       "comment" : "tvOS Ko-fi QR sheet title",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "دعم SmartTube على Ko-fi"
+            "value" : "دعم iTube على Ko-fi"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SmartTube auf Ko-fi unterstützen"
+            "value" : "iTube auf Ko-fi unterstützen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apoyar SmartTube en Ko-fi"
+            "value" : "Apoyar iTube en Ko-fi"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Soutenir SmartTube sur Ko-fi"
+            "value" : "Soutenir iTube sur Ko-fi"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ko-fi पर SmartTube का समर्थन करें"
+            "value" : "Ko-fi पर iTube का समर्थन करें"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Podržite SmartTube na Ko-fi"
+            "value" : "Podržite iTube na Ko-fi"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dukung SmartTube di Ko-fi"
+            "value" : "Dukung iTube di Ko-fi"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supporta SmartTube su Ko-fi"
+            "value" : "Supporta iTube su Ko-fi"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ko-fiでSmartTubeをサポート"
+            "value" : "Ko-fiでiTubeをサポート"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ko-fi에서 SmartTube 후원"
+            "value" : "Ko-fi에서 iTube 후원"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apoiar SmartTube no Ko-fi"
+            "value" : "Apoiar iTube no Ko-fi"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Поддержите SmartTube на Ko-fi"
+            "value" : "Поддержите iTube на Ko-fi"
           }
         },
         "sr" : {
@@ -23163,13 +23163,13 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ko-fi'de SmartTube'yu Destekle"
+            "value" : "Ko-fi'de iTube'yu Destekle"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 Ko-fi 上支持 SmartTube"
+            "value" : "在 Ko-fi 上支持 iTube"
           }
         }
       }
@@ -26040,7 +26040,7 @@
         }
       }
     },
-    "Watch history is saved on this device. SmartTube also tries to report watches to your YouTube account, but YouTube may not always record them." : {
+    "Watch history is saved on this device. iTube also tries to report watches to your YouTube account, but YouTube may not always record them." : {
 
     },
     "Watched threshold: %lld%%" : {

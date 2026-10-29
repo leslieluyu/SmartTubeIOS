@@ -39,32 +39,32 @@ extension PlayerView {
     @ViewBuilder var overlayStack: some View {
         if showMoreMenu {
             moreMenuOverlay
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(settingsOverlayTransition)
                 .animation(.easeOut(duration: 0.2), value: showMoreMenu)
         }
         if showSpeedPicker {
             speedPickerOverlay
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(settingsOverlayTransition)
                 .animation(.easeOut(duration: 0.2), value: showSpeedPicker)
         }
         if showQualityPicker {
             qualityPickerOverlay
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(settingsOverlayTransition)
                 .animation(.easeOut(duration: 0.2), value: showQualityPicker)
         }
         if showCaptionPicker {
             captionPickerOverlay
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(settingsOverlayTransition)
                 .animation(.easeOut(duration: 0.2), value: showCaptionPicker)
         }
         if showAudioTrackPicker {
             audioTrackPickerOverlay
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(settingsOverlayTransition)
                 .animation(.easeOut(duration: 0.2), value: showAudioTrackPicker)
         }
         if showSleepTimerPicker {
             sleepTimerPickerOverlay
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(settingsOverlayTransition)
                 .animation(.easeOut(duration: 0.2), value: showSleepTimerPicker)
         }
         if showDescriptionSheet {
@@ -79,17 +79,33 @@ extension PlayerView {
         }
     }
 
+    var settingsOverlayTransition: AnyTransition {
+        #if os(tvOS)
+        .move(edge: .trailing).combined(with: .opacity)
+        #else
+        .move(edge: .bottom).combined(with: .opacity)
+        #endif
+    }
+
+    var overlayPanelAlignment: Alignment {
+        #if os(tvOS)
+        .trailing
+        #else
+        .bottom
+        #endif
+    }
+
     // MARK: - More menu overlay
 
-    /// Pure-SwiftUI bottom sheet combining all top-bar controls + Share/Download.
-    /// Rendered inside the player's ZStack so no UIKit sheet presentation
-    /// fires onDisappear and teardowns the action sheet mid-animation.
+    /// Options / settings. On tvOS this is a YouTube-TV-style right-side panel;
+    /// on iOS it stays a bottom sheet. Rendered inside the player's ZStack so no
+    /// UIKit sheet presentation fires onDisappear and teardowns playback.
     var moreMenuOverlay: some View {
         let currentVideo = vm.playerInfo?.video ?? video
         menuLog.notice(
             "[moreMenu] rendering — video=\(currentVideo.id) availableFormats=\(vm.availableFormats.count) isSignedIn=\(authService.isSignedIn)"
         )
-        return ZStack(alignment: .bottom) {
+        return ZStack(alignment: overlayPanelAlignment) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss {
@@ -103,19 +119,49 @@ extension PlayerView {
             // causes AttributeGraph EXC_BAD_ACCESS when SwiftUI evaluates both alternatives and the
             // shared @ViewBuilder identity produces a graph cycle. Using a single ScrollView path
             // is safe because .frame(maxHeight:) already caps the height appropriately.
-            ScrollView {
-                moreMenuItems
-                    // Measure the VStack's natural height one pass before the
-                    // containing frame is applied, so the sheet hugs its content.
-                    .background(
-                        GeometryReader { proxy in
-                            Color.clear.preference(
-                                key: MoreMenuContentHeightKey.self,
-                                value: proxy.size.height
-                            )
-                        }
+            moreMenuPanel
+        }
+        .ignoresSafeArea()
+        #if os(tvOS)
+        .focusScope(moreMenuNamespace)
+        #endif
+    }
+
+    @ViewBuilder private var moreMenuScrollContent: some View {
+        moreMenuItems
+            // Measure the VStack's natural height one pass before the
+            // containing frame is applied, so the sheet hugs its content.
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: MoreMenuContentHeightKey.self,
+                        value: proxy.size.height
                     )
+                }
+            )
+    }
+
+    @ViewBuilder private var moreMenuPanel: some View {
+        #if os(tvOS)
+        ScrollView { moreMenuScrollContent }
+            .accessibilityIdentifier("player.moreMenu.scrollView")
+            .background(Color.black.opacity(TVOSPlayerChromeMetrics.settingsPanelBackgroundOpacity))
+            .frame(width: TVOSPlayerChromeMetrics.settingsPanelWidth)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .onExitCommand {
+                menuLog.notice("[moreMenu] onExitCommand fired — dismissing via Menu button")
+                showMoreMenu = false
             }
+            .onAppear {
+                menuLog.notice("[moreMenu] overlay appeared — native tvOS focus via .focused() bindings")
+            }
+            .onDisappear {
+                menuLog.notice("[moreMenu] overlay disappeared")
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("player.settingsPanel")
+        #else
+        ScrollView { moreMenuScrollContent }
             .accessibilityIdentifier("player.moreMenu.scrollView")
             .background(.regularMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -127,38 +173,31 @@ extension PlayerView {
                 maxWidth: moreMenuPortraitWidth,
                 maxHeight: moreMenuContentHeight > 0 ? min(moreMenuContentHeight, moreMenuMaxHeight) : moreMenuMaxHeight
             )
-            #if os(tvOS)
-            // Native SwiftUI focus handles D-pad navigation via the .focused() bindings
-            // on each row button. onMoveCommand was removed because it caused a double-step
-            // bug: both onMoveCommand and the native focus engine responded to the same
-            // D-pad event, advancing focus twice per press.
-            .onExitCommand {
-                menuLog.notice("[moreMenu] onExitCommand fired — dismissing via Menu button")
-                showMoreMenu = false
-            }
-            .onAppear {
-                menuLog.notice("[moreMenu] overlay appeared — native tvOS focus via .focused() bindings")
-            }
-            .onDisappear {
-                menuLog.notice("[moreMenu] overlay disappeared")
-            }
-            #endif
             .padding(.horizontal, 8)
             .safeAreaPadding(.horizontal)
             .padding(.horizontal, moreMenuAdditionalHorizontalPadding)
             .safeAreaPadding(.bottom)
             .padding(.bottom, 8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        }
-        .ignoresSafeArea()
-        #if os(tvOS)
-        .focusScope(moreMenuNamespace)
         #endif
     }
 
     @ViewBuilder private var moreMenuItems: some View {
         let currentVideo = vm.playerInfo?.video ?? video
         VStack(spacing: 0) {
+            #if os(tvOS)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Settings")
+                    .font(.headline.weight(.semibold))
+                Text(currentVideo.title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 22)
+            #else
             // Centered title header
             VStack(spacing: 2) {
                 Text(currentVideo.title)
@@ -176,6 +215,7 @@ extension PlayerView {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+            #endif
             Divider()
             #if os(tvOS)
             moreMenuSpeedRow
@@ -766,6 +806,28 @@ extension PlayerView {
         .background(moreMenuFocusedRow == .cancel ? Color.gray.opacity(0.35) : .clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .focused($moreMenuFocusedRow, equals: .cancel)
+        #endif
+    }
+}
+
+/// Chrome for in-player settings / quality / speed pickers.
+/// tvOS: right-side YouTube TV drawer. iOS: bottom material sheet.
+struct PlayerOverlayPanelModifier: ViewModifier {
+    var iOSMaxWidth: CGFloat
+
+    func body(content: Content) -> some View {
+        #if os(tvOS)
+        content
+            .frame(width: TVOSPlayerChromeMetrics.settingsPanelWidth)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .background(Color.black.opacity(TVOSPlayerChromeMetrics.settingsPanelBackgroundOpacity))
+        #else
+        content
+            .frame(maxWidth: iOSMaxWidth)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
         #endif
     }
 }

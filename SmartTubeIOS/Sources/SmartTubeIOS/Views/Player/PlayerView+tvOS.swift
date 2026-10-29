@@ -267,47 +267,48 @@ extension PlayerControlsOverlay {
         let currentVideo = vm.playerInfo?.video ?? video
         let channelId = currentVideo.channelId ?? video.channelId
         let description = currentVideo.description ?? video.description ?? ""
+        let metrics = TVOSPlayerChromeMetrics.self
         return VStack(spacing: 0) {
             Spacer(minLength: 0)
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: metrics.infoSpacing) {
                 Text(currentVideo.title)
-                    .font(.title2.weight(.semibold))
+                    .font(.system(size: metrics.titleFontSize, weight: .semibold))
                     .foregroundStyle(.white)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .accessibilityIdentifier("player.chromeTitle")
 
                 if !description.isEmpty {
                     Text(description)
-                        .font(.callout)
+                        .font(.system(size: metrics.descriptionFontSize))
                         .foregroundStyle(.white.opacity(0.78))
-                        .lineLimit(2)
+                        .lineLimit(1)
                         .accessibilityIdentifier("player.descriptionLabel")
                 }
 
-                HStack(spacing: 20) {
+                HStack(spacing: 14) {
                     tvOverlayControl(
                         highlighted: highlightedControl == .channel,
-                        scale: 1.12,
-                        shadowRadius: 10,
+                        scale: 1.08,
+                        shadowRadius: 8,
                         identifier: "player.channelName",
                         enabled: channelId?.isEmpty == false
                     ) {
                         Text(currentVideo.channelTitle)
-                            .font(.headline)
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.9))
                             .lineLimit(1)
                     }
                     tvOverlayControl(
                         highlighted: highlightedControl == .subscribe,
-                        scale: 1.1,
-                        shadowRadius: 10,
+                        scale: 1.08,
+                        shadowRadius: 8,
                         identifier: "player.subscribeButton",
                         enabled: channelId?.isEmpty == false
                     ) {
                         Text(isChannelFollowed ? "Subscribed" : "Subscribe")
-                            .font(.headline.weight(.semibold))
-                            .padding(.horizontal, 22)
-                            .padding(.vertical, 10)
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, metrics.subscribeHorizontalPadding)
+                            .padding(.vertical, metrics.subscribeVerticalPadding)
                             .background(
                                 isChannelFollowed ? Color.white.opacity(0.22) : Color.red,
                                 in: Capsule()
@@ -326,19 +327,19 @@ extension PlayerControlsOverlay {
                 progressBar
                     .accessibilityIdentifier("player.progressBar")
 
-                HStack(spacing: 20) {
-                    HStack(spacing: 36) {
+                HStack(spacing: 16) {
+                    HStack(spacing: metrics.transportSpacing) {
                         tvOverlayControl(
                             highlighted: highlightedControl == .prevVideo,
-                            scale: 1.2,
-                            shadowRadius: 10,
+                            scale: metrics.skipHighlightScale,
+                            shadowRadius: 8,
                             identifier: "player.prevBtn",
                             enabled: vm.hasPrevious && !vm.isLoading,
-                            width: 56,
-                            height: 56
+                            width: metrics.skipSize,
+                            height: metrics.skipSize
                         ) {
                             Image(systemName: AppSymbol.previousTrack)
-                                .font(.title2)
+                                .font(.system(size: metrics.actionGlyphIconSize, weight: .semibold))
                                 .foregroundStyle(vm.hasPrevious && !vm.isLoading ? .white : .white.opacity(0.3))
                         }
                         seekButton(
@@ -352,20 +353,20 @@ extension PlayerControlsOverlay {
                             tvHighlighted: false)
                         tvOverlayControl(
                             highlighted: highlightedControl == .nextVideo,
-                            scale: 1.2,
-                            shadowRadius: 10,
+                            scale: metrics.skipHighlightScale,
+                            shadowRadius: 8,
                             identifier: "player.nextBtn",
                             enabled: vm.hasNext,
-                            width: 56,
-                            height: 56
+                            width: metrics.skipSize,
+                            height: metrics.skipSize
                         ) {
                             Image(systemName: AppSymbol.nextTrack)
-                                .font(.title2)
+                                .font(.system(size: metrics.actionGlyphIconSize, weight: .semibold))
                                 .foregroundStyle(vm.hasNext ? .white : .white.opacity(0.3))
                         }
                     }
-                    Spacer(minLength: 16)
-                    HStack(spacing: 14) {
+                    Spacer(minLength: 12)
+                    HStack(spacing: metrics.actionSpacing) {
                         tvActionGlyph(
                             control: .like,
                             identifier: "player.likeButton",
@@ -402,12 +403,12 @@ extension PlayerControlsOverlay {
                 .disabled(vm.isLoading)
                 .opacity(vm.isLoading ? 0.35 : 1)
             }
-            .padding(.horizontal, 48)
-            .padding(.bottom, 36)
-            .padding(.top, 20)
+            .padding(.horizontal, metrics.horizontalPadding)
+            .padding(.bottom, metrics.bottomPadding)
+            .padding(.top, metrics.topPadding)
             .background(
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.55), .black.opacity(0.88)],
+                    colors: [.clear, .black.opacity(0.5), .black.opacity(0.82)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -427,14 +428,14 @@ extension PlayerControlsOverlay {
     ) -> some View {
         tvOverlayControl(
             highlighted: highlightedControl == control,
-            scale: 1.28,
-            shadowRadius: 10,
+            scale: TVOSPlayerChromeMetrics.actionGlyphHighlightScale,
+            shadowRadius: 8,
             identifier: identifier,
-            width: 64,
-            height: 64
+            width: TVOSPlayerChromeMetrics.actionGlyphSize,
+            height: TVOSPlayerChromeMetrics.actionGlyphSize
         ) {
             Image(systemName: systemName)
-                .font(.title2)
+                .font(.system(size: TVOSPlayerChromeMetrics.actionGlyphIconSize, weight: .semibold))
                 .foregroundStyle(accented ? Color.accentColor : .white)
         }
     }
@@ -448,7 +449,7 @@ extension PlayerControlsOverlay {
             // Scrub time tooltip
             GeometryReader { geo in
                 if vm.isScrubbing && vm.duration > 0 {
-                    let hPad: CGFloat = 40
+                    let hPad: CGFloat = TVOSPlayerChromeMetrics.progressHorizontalPad
                     let trackW = geo.size.width - hPad * 2
                     let fraction = CGFloat(vm.scrubTime / vm.duration)
                     let thumbX = hPad + trackW * fraction
@@ -475,28 +476,30 @@ extension PlayerControlsOverlay {
                     .position(x: clampedX, y: geo.size.height / 2)
                 }
             }
-            .frame(height: 36)
+            .frame(height: TVOSPlayerChromeMetrics.progressTooltipHeight)
 
             // Track row
             GeometryReader { geo in
-                let hPad: CGFloat = 40
+                let hPad: CGFloat = TVOSPlayerChromeMetrics.progressHorizontalPad
                 let trackW = geo.size.width - hPad * 2
                 let time = vm.isScrubbing ? vm.scrubTime : vm.currentTime
                 let progress = vm.duration > 0 ? CGFloat(time / vm.duration) : 0
                 let thumbX = hPad + trackW * progress
+                let trackH = TVOSPlayerChromeMetrics.progressTrackHeight
+                let thumb = TVOSPlayerChromeMetrics.progressThumb
 
                 ZStack {
                     // Background track
                     Capsule()
                         .fill(Color.white.opacity(0.25))
-                        .frame(height: 6)
+                        .frame(height: trackH)
                         .padding(.horizontal, hPad)
 
                     // Progress fill
                     HStack(spacing: 0) {
                         Capsule()
                             .fill(Color.red.opacity(0.85))
-                            .frame(width: max(thumbX - hPad, 0), height: 6)
+                            .frame(width: max(thumbX - hPad, 0), height: trackH)
                         Spacer(minLength: 0)
                     }
                     .padding(.leading, hPad)
@@ -504,26 +507,26 @@ extension PlayerControlsOverlay {
                     // Thumb
                     Circle()
                         .fill(Color.white)
-                        .frame(width: 22, height: 22)
-                        .shadow(color: .black.opacity(0.4), radius: 4)
+                        .frame(width: thumb, height: thumb)
+                        .shadow(color: .black.opacity(0.4), radius: 3)
                         .position(x: thumbX, y: geo.size.height / 2)
                 }
                 .overlay(sponsorBlockMarkers)
                 .overlay(chapterMarkers)
             }
-            .frame(height: 36)
+            .frame(height: TVOSPlayerChromeMetrics.progressTrackRowHeight)
 
             // Time labels
             HStack {
                 Text(formatDuration(vm.currentTime))
-                    .font(.callout.monospacedDigit())
+                    .font(.caption.monospacedDigit())
                     .foregroundStyle(.white.opacity(0.9))
-                    .padding(.leading, 40)
+                    .padding(.leading, TVOSPlayerChromeMetrics.progressHorizontalPad)
                 Spacer()
                 Text(formatDuration(vm.duration))
-                    .font(.callout.monospacedDigit())
+                    .font(.caption.monospacedDigit())
                     .foregroundStyle(.white.opacity(0.9))
-                    .padding(.trailing, 40)
+                    .padding(.trailing, TVOSPlayerChromeMetrics.progressHorizontalPad)
             }
         }
     }

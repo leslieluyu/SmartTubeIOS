@@ -21,7 +21,7 @@ struct HomeFeedWidget: Widget {
             HomeFeedWidgetView(entry: entry)
                 .containerBackground(.black, for: .widget)
         }
-        .configurationDisplayName("SmartTube Home")
+        .configurationDisplayName("iTube Home")
         .description("Videos from your Home page. Tap one to play it.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
@@ -118,7 +118,7 @@ struct HomeFeedWidgetView: View {
             Image(systemName: "play.rectangle.fill")
                 .font(.title)
                 .foregroundStyle(.red)
-            Text("Open SmartTube to load your Home feed")
+            Text("Open iTube to load your Home feed")
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white.opacity(0.8))

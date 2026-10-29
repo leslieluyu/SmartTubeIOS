@@ -247,7 +247,7 @@ public struct SettingsView: View {
             Text("General")
         } footer: {
             Text(
-                "Watch history is saved on this device. SmartTube also tries to report watches to your YouTube account, but YouTube may not always record them."
+                "Watch history is saved on this device. iTube also tries to report watches to your YouTube account, but YouTube may not always record them."
             )
         }
     }
@@ -502,7 +502,7 @@ private struct GitHubQRView: View {
                         .font(.system(size: 56))
                         .foregroundStyle(.white)
 
-                    Text("SmartTube on GitHub")
+                    Text("iTube on GitHub")
                         .font(.largeTitle).fontWeight(.bold)
 
                     Text("Scan the QR code with your phone to view the project on GitHub.")

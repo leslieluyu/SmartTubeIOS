@@ -27,7 +27,7 @@ extension PlayerView {
     // MARK: - Quality picker overlay
 
     var qualityPickerOverlay: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: overlayPanelAlignment) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showQualityPicker = false }
@@ -114,9 +114,7 @@ extension PlayerView {
                 .focused($qualityPickerFocused)
                 #endif
             }
-            .frame(maxWidth: moreMenuPortraitWidth)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .modifier(PlayerOverlayPanelModifier(iOSMaxWidth: moreMenuPortraitWidth))
             .accessibilityIdentifier("player.qualityPicker")
             .task {
                 // Fix 2A: pre-warm all quality tiers the moment the picker opens so that
@@ -130,8 +128,6 @@ extension PlayerView {
                 showQualityPicker = false
             }
             #endif
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
         }
         .ignoresSafeArea()
     }
@@ -139,7 +135,7 @@ extension PlayerView {
     // MARK: - Speed picker overlay
 
     var speedPickerOverlay: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: overlayPanelAlignment) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showSpeedPicker = false }
@@ -189,9 +185,7 @@ extension PlayerView {
                 .focused($speedPickerFocused)
                 #endif
             }
-            .frame(maxWidth: moreMenuPortraitWidth)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .modifier(PlayerOverlayPanelModifier(iOSMaxWidth: moreMenuPortraitWidth))
             .accessibilityIdentifier("player.speedPicker")
             #if os(tvOS)
             .focusScope(speedPickerNamespace)
@@ -200,8 +194,6 @@ extension PlayerView {
                 showSpeedPicker = false
             }
             #endif
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
         }
         .ignoresSafeArea()
     }
@@ -209,7 +201,7 @@ extension PlayerView {
     // MARK: - Sleep timer picker overlay
 
     var sleepTimerPickerOverlay: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: overlayPanelAlignment) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showSleepTimerPicker = false }
@@ -275,9 +267,7 @@ extension PlayerView {
                 }
                 .frame(maxHeight: 320)
             }
-            .frame(maxWidth: moreMenuPortraitWidth)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .modifier(PlayerOverlayPanelModifier(iOSMaxWidth: moreMenuPortraitWidth))
             .accessibilityIdentifier("player.sleepTimerPicker")
             #if os(tvOS)
             .focusScope(sleepTimerNamespace)
@@ -286,8 +276,6 @@ extension PlayerView {
                 showSleepTimerPicker = false
             }
             #endif
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
         }
         .ignoresSafeArea()
     }
@@ -295,7 +283,7 @@ extension PlayerView {
     // MARK: - Caption picker overlay
 
     var captionPickerOverlay: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: overlayPanelAlignment) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showCaptionPicker = false }
@@ -375,16 +363,12 @@ extension PlayerView {
                 .focused($captionPickerFocused)
                 #endif
             }
-            .frame(maxWidth: moreMenuPortraitWidth)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .modifier(PlayerOverlayPanelModifier(iOSMaxWidth: moreMenuPortraitWidth))
             .accessibilityIdentifier("player.captionPicker")
             #if os(tvOS)
             .focusScope(captionPickerNamespace)
             .onExitCommand { showCaptionPicker = false }
             #endif
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
         }
         .ignoresSafeArea()
     }
@@ -392,7 +376,7 @@ extension PlayerView {
     // MARK: - Audio track picker overlay
 
     var audioTrackPickerOverlay: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: overlayPanelAlignment) {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .playerOverlayScrimDismiss { showAudioTrackPicker = false }
@@ -472,17 +456,13 @@ extension PlayerView {
                 .focused($audioTrackPickerFocused)
                 #endif
             }
-            .frame(maxWidth: moreMenuPortraitWidth)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .modifier(PlayerOverlayPanelModifier(iOSMaxWidth: moreMenuPortraitWidth))
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("player.audioTrackPicker")
             #if os(tvOS)
             .focusScope(audioTrackPickerNamespace)
             .onExitCommand { showAudioTrackPicker = false }
             #endif
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
         }
         .ignoresSafeArea()
     }

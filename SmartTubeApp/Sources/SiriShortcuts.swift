@@ -6,20 +6,20 @@ import SmartTubeIOSCore
 
 // MARK: - OpenYouTubeVideoIntent
 
-/// Opens a YouTube video directly in SmartTube from Siri or the Shortcuts app.
+/// Opens a YouTube video directly in iTube from Siri or the Shortcuts app.
 ///
 /// Siri phrases (registered via ``SmartTubeShortcuts``):
-///   - "Watch on SmartTube"
-///   - "Open YouTube video in SmartTube"
-///   - "Play in SmartTube"
+///   - "Watch on iTube"
+///   - "Open YouTube video in iTube"
+///   - "Play in iTube"
 ///
 /// The intent extracts the video ID using ``YouTubeLinkHandler`` and fires the
 /// existing `smarttube://video/<id>` deep link, which ``AppEntry.handleOpenURL``
 /// already handles — no new playback wiring required.
 struct OpenYouTubeVideoIntent: AppIntent {
-    static let title: LocalizedStringResource = "Open YouTube Video in SmartTube"
+    static let title: LocalizedStringResource = "Open YouTube Video in iTube"
     static let description = IntentDescription(
-        "Opens a YouTube video or Short URL directly in SmartTube."
+        "Opens a YouTube video or Short URL directly in iTube."
     )
     static let openAppWhenRun: Bool = true
 
@@ -51,15 +51,15 @@ private func open(_ route: SmartTubeRoute) async {
 // MARK: - SearchYouTubeIntent
 
 struct SearchYouTubeIntent: AppIntent {
-    static let title: LocalizedStringResource = "Search YouTube in SmartTube"
-    static let description = IntentDescription("Searches YouTube in SmartTube.")
+    static let title: LocalizedStringResource = "Search YouTube in iTube"
+    static let description = IntentDescription("Searches YouTube in iTube.")
     static let openAppWhenRun: Bool = true
 
     @Parameter(title: "Search for", requestValueDialog: "What do you want to search for?")
     var query: String
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Search SmartTube for \(\.$query)")
+        Summary("Search iTube for \(\.$query)")
     }
 
     @MainActor
@@ -89,7 +89,7 @@ enum SmartTubeSection: String, AppEnum {
 }
 
 struct OpenSectionIntent: AppIntent {
-    static let title: LocalizedStringResource = "Open SmartTube Section"
+    static let title: LocalizedStringResource = "Open iTube Section"
     static let description = IntentDescription("Opens a Home page section such as Subscriptions or Watch Later.")
     static let openAppWhenRun: Bool = true
 
@@ -97,7 +97,7 @@ struct OpenSectionIntent: AppIntent {
     var section: SmartTubeSection
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Open \(\.$section) in SmartTube")
+        Summary("Open \(\.$section) in iTube")
     }
 
     @MainActor
@@ -124,7 +124,7 @@ struct PlayWatchLaterIntent: AppIntent {
 
 struct ContinueWatchingIntent: AppIntent {
     static let title: LocalizedStringResource = "Continue Watching"
-    static let description = IntentDescription("Resumes the video you watched last in SmartTube.")
+    static let description = IntentDescription("Resumes the video you watched last in iTube.")
     static let openAppWhenRun: Bool = true
 
     @MainActor
@@ -137,8 +137,8 @@ struct ContinueWatchingIntent: AppIntent {
 // MARK: - Player controls (run without opening the app)
 
 struct PlayPauseVideoIntent: AppIntent {
-    static let title: LocalizedStringResource = "Play or Pause SmartTube"
-    static let description = IntentDescription("Plays or pauses the video playing in SmartTube.")
+    static let title: LocalizedStringResource = "Play or Pause iTube"
+    static let description = IntentDescription("Plays or pauses the video playing in iTube.")
 
     @MainActor
     func perform() async throws -> some IntentResult {
@@ -148,8 +148,8 @@ struct PlayPauseVideoIntent: AppIntent {
 }
 
 struct SkipForwardIntent: AppIntent {
-    static let title: LocalizedStringResource = "Skip Forward in SmartTube"
-    static let description = IntentDescription("Skips forward in the video playing in SmartTube.")
+    static let title: LocalizedStringResource = "Skip Forward in iTube"
+    static let description = IntentDescription("Skips forward in the video playing in iTube.")
 
     @Parameter(title: "Seconds", default: 10, inclusiveRange: (1, 600))
     var seconds: Int
@@ -162,8 +162,8 @@ struct SkipForwardIntent: AppIntent {
 }
 
 struct SkipBackwardIntent: AppIntent {
-    static let title: LocalizedStringResource = "Skip Back in SmartTube"
-    static let description = IntentDescription("Skips back in the video playing in SmartTube.")
+    static let title: LocalizedStringResource = "Skip Back in iTube"
+    static let description = IntentDescription("Skips back in the video playing in iTube.")
 
     @Parameter(title: "Seconds", default: 10, inclusiveRange: (1, 600))
     var seconds: Int
@@ -176,8 +176,8 @@ struct SkipBackwardIntent: AppIntent {
 }
 
 struct NextVideoIntent: AppIntent {
-    static let title: LocalizedStringResource = "Next Video in SmartTube"
-    static let description = IntentDescription("Plays the next video in SmartTube.")
+    static let title: LocalizedStringResource = "Next Video in iTube"
+    static let description = IntentDescription("Plays the next video in iTube.")
 
     @MainActor
     func perform() async throws -> some IntentResult {
@@ -200,7 +200,7 @@ struct SmartTubeShortcuts: AppShortcutsProvider {
                 "Watch on \(.applicationName)",
                 "Play in \(.applicationName)",
             ],
-            shortTitle: "Open in SmartTube",
+            shortTitle: "Open in iTube",
             systemImageName: "play.rectangle"
         )
         AppShortcut(
@@ -252,10 +252,10 @@ enum SmartTubeIntentError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: "Could not build a SmartTube deep link."
+        case .invalidURL: "Could not build an iTube deep link."
         case .notYouTubeURL: "The URL doesn't appear to be a YouTube video link."
         case .emptySearch: "Say or type what to search for."
-        case .nothingPlaying: "Nothing is playing in SmartTube."
+        case .nothingPlaying: "Nothing is playing in iTube."
         }
     }
 }

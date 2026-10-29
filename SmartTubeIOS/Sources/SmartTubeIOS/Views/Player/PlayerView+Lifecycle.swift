@@ -277,7 +277,10 @@ extension PlayerView {
                             // occupy ~130pt. Push captions above that area. When controls
                             // are hidden, a small margin from the safe-area bottom is enough.
                             #if os(tvOS)
-                            .padding(.bottom, vm.controlsVisible ? 240 : 24)
+                            .padding(
+                                .bottom,
+                                vm.controlsVisible
+                                    ? TVOSPlayerChromeMetrics.captionsBottomWhenControlsVisible : 24)
                             #else
                             .padding(.bottom, vm.controlsVisible ? 130 : 24)
                             #endif
@@ -640,6 +643,8 @@ extension PlayerView {
         Group {
             #if os(tvOS)
             tvosPlayerSessionModifiers
+                .navigationTitle("")
+                .toolbar(.hidden, for: .navigationBar)
                 .toolbar(.hidden, for: .tabBar)
             #elseif os(iOS)
             playerContentView
@@ -661,6 +666,7 @@ extension PlayerView {
             swipeLog.notice("[PlayerView] onAppear id=\(video.id)")
             isVisible = true
             #if os(tvOS)
+            playbackPresentation.beginFullscreenSession()
             playerFocused = true
             #endif
             #if os(iOS)
@@ -787,6 +793,11 @@ extension PlayerView {
         .onDisappear {
             swipeLog.notice("[PlayerView] onDisappear id=\(video.id) isInBackground=\(isInBackground)")
             isVisible = false
+            #if os(tvOS)
+            if !isInBackground {
+                playbackPresentation.endFullscreenSession()
+            }
+            #endif
             guard !isInBackground else { return }
             #if os(iOS)
             let rawOrientationOnDisappear = UIDevice.current.orientation

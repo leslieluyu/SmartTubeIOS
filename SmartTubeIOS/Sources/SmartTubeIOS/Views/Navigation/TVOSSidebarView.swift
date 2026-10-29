@@ -6,7 +6,9 @@ import SwiftUI
 /// YouTube-style left navigation rail for Apple TV.
 /// Collapsed: a stack of icons. Expanded (when the rail has focus): labeled
 /// destinations. Left from home content focuses the rail; Right returns focus
-/// to the page. Existing 4K player focus is unaffected — this is browse chrome.
+/// to the page. Hidden while `TVOSPlaybackPresentation.isFullscreen` so the
+/// player is edge-to-edge. Existing 4K player focus is unaffected — this is
+/// browse chrome.
 ///
 /// Sized via `TVOSSidebarMetrics` for a medium 1080p rhythm: 30pt icons, 26pt
 /// labels, fixed row spacing. Settings stays at the bottom; extra height is

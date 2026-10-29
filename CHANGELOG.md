@@ -8,6 +8,9 @@ All notable changes to SmartTube are documented here.
 
 ### Changed
 - **iTube branding (Apple TV / SpringBoard)** — display name is `iTube`; app icon is the navy framed-i artwork at all App Icon and App Icon TV sizes
+- **iTube user-facing copy** — UI labels, alerts, About, launch screen, Share/Safari extensions, Siri shortcuts, and localizations say iTube; bundle ID `com.void.smarttube.app` is unchanged
+- **tvOS fullscreen player** — left navigation rail is removed while a video is playing and restored on Back
+- **tvOS player chrome** — denser bottom transport; Settings / quality open as a right-side panel instead of a wide bottom strip
 
 ---
 
